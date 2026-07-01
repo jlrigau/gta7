@@ -1,221 +1,274 @@
 /* =========================================================
-   GAME DEFINITION — "Nebula Nursery" (demo game)
+   GAME DEFINITION — "GTA 7 · Neon City"
    ---------------------------------------------------------
    This file is the ENTIRE game: data + asset references.
    The engine (engine.js) contains no game content; it reads
-   this `window.GAME` object. Swap this file + assets to make
-   a brand-new game from the same engine.
+   this `window.GAME` object.
 
-   This demo is deliberately MINIMAL — a clean starting point.
-   The engine supports much more (variants, customization,
-   riding, breeding, shop/economy, decorations, objectives,
-   trail loops…); you add those by ITERATING on this config.
-   See ENGINE.md for the full schema and capabilities.
+   Theme: a small top-down neon city. On foot you explore the
+   streets, hop into a car (the engine's "ride" system — fuel
+   is the ride fatigue, stunt jumps are the ride jump), earn
+   cash doing deliveries and complete missions. Cartoon /
+   arcade tone, no explicit content. UI in French.
 
-   Theme: a tiny space nursery where a keeper robot looks
-   after glowing alien critters. All textures are generated
-   and specific to this universe (CC0).
+   All textures are generated (Pillow, CC0) — see tools/.
+   Deliberately MINIMAL: a car-dealership shop, riding pedestrians,
+   more districts, etc. are added by ITERATING on this config.
    ========================================================= */
 
 window.GAME = {
-  /* ---- Identity, theming, UI strings ---- */
+  /* ---- Identity, theming, UI strings (French) ---- */
   meta: {
-    title: "Nebula Nursery",
-    titleIcon: "👾",
-    shortName: "Nebula",
-    tagline: "Look after the little glowing critters!",
-    saveKey: "nebula-nursery",
-    audience: { minAge: 6, notes: "all-ages, gentle, cute, no violence" },
-    assetVersion: "v26",
-    theme: { home: "#171036", play: "#0e1430" },
-    showCoins: false,                 // minimal demo: no economy
-    namePrompt: { label: "Name your nursery:", placeholder: "Starlight Bay" },
-    startName: "My Nursery",
-    namePromptYou: "Your name",
-    avatarPrompt: "Pick your keeper",
-    createTitle: "🤖 Choose your keeper",
-    createOkLabel: "✅ Let's go!",
-    startLabel: "▶ New game",
-    continueLabel: "📂 Continue",
-    continueHint: "A saved game exists: tap “Continue”. 👾",
-    helpTitle: "❓ How to play",
-    ageUnit: "c", and: "and",
-    nightMessage: "🌙 The lights dim…",
-    restBlockedHint: "You just woke up! Look after a critter first. 👾",
-    neglectMessage: "🌅 Cycle {day}. Look after {names}!",
-    morningMessage: "🌅 Cycle {day}: everyone rested well. ✨",
-    idleHint: "Move around 🚀 and approach a critter to look after it.",
+    title: "GTA 7 · Neon City",
+    titleIcon: "🚗",
+    shortName: "GTA7",
+    tagline: "Roule dans la ville, fais des livraisons, deviens un caïd !",
+    saveKey: "gta7-neon-city",
+    audience: { minAge: 10, notes: "arcade/cartoon action, top-down driving, mild — no gore, no blood, no explicit content" },
+    assetVersion: "v1",
+    theme: { home: "#160f28", play: "#141024" },
+
+    showCoins: true,
+    coinIcon: "💵",
+    showCreatureCount: false,   // cars aren't a "count to grow" — keep the HUD clean
+    showCapacity: false,
+    showDay: true,
+
+    namePrompt: { label: "Nom de ta ville :", placeholder: "Neon City" },
+    startName: "Neon City",
+    namePromptYou: "Ton nom",
+    avatarPrompt: "Choisis ton perso",
+    createTitle: "🕶️ Choisis ton personnage",
+    createOkLabel: "✅ C'est parti !",
+    startLabel: "▶ Nouvelle partie",
+    continueLabel: "📂 Continuer",
+    continueHint: "Une partie est sauvegardée : appuie sur « Continuer ». 🚗",
+    helpTitle: "❓ Comment jouer",
+
+    nightMessage: "🌙 La nuit tombe sur Neon City…",
+    morningMessage: "🌅 Jour {day} : nouvelle journée à Neon City. Le plein est fait ! ⛽",
+    neglectMessage: "🌅 Jour {day}. En route pour de nouvelles courses !",
+    restBlockedHint: "Tu viens de te réveiller ! Va faire un tour ou une course d'abord. 🚗",
+    idleHint: "Déplace-toi 🚶 puis approche une voiture pour la conduire. Approche un bâtiment pour agir.",
+
+    notEnough: "💸 Pas assez d'argent !",
+    nameLabel: "Nom",
+    confirm: "Valider",
+    nameTaken: "Ce nom est déjà pris.",
+    closeLabel: "Fermer",
+    cancel: "Annuler",
   },
 
-  /* ---- World ---- */
+  /* ---- World: a top-down city. Base ground is asphalt (roads); sidewalk
+         blocks + a park are painted on top, buildings sit on the blocks. ---- */
   world: {
-    width: 1800, height: 1300, groundTile: "ground", bg: "#0e1430",
+    width: 2400, height: 1700, groundTile: "asphalt", bg: "#141024",
     patches: [
-      { x: 300, y: 560, w: 320, h: 150, tile: "energy", ox: 0.5, oy: 0.5 },  // path to the pen gate
+      // city blocks (sidewalk) in the four corners
+      { x: 140,  y: 150,  w: 560, h: 470, tile: "sidewalk" },
+      { x: 1700, y: 150,  w: 560, h: 470, tile: "sidewalk" },
+      { x: 140,  y: 1080, w: 560, h: 470, tile: "sidewalk" },
+      { x: 1700, y: 1080, w: 560, h: 470, tile: "sidewalk" },
+      // central park
+      { x: 930,  y: 540,  w: 560, h: 300, tile: "grass" },
+      // crosswalks at a few intersections (flavour)
+      { x: 800,  y: 360,  w: 64,  h: 130, tile: "crosswalk" },
+      { x: 1540, y: 360,  w: 64,  h: 130, tile: "crosswalk" },
+      { x: 800,  y: 1210, w: 64,  h: 130, tile: "crosswalk" },
+      { x: 1540, y: 1210, w: 64,  h: 130, tile: "crosswalk" },
     ],
   },
-  camera: { fitW: 720, fitH: 760, min: 0.5, max: 1.0 },
+  camera: { fitW: 1300, fitH: 1160, min: 0.4, max: 0.8 },
 
   /* ---- Assets (all generated, CC0) ---- */
   assets: {
     images: {
-      ground: "assets/img/ground.png", energy: "assets/img/energy.png",
-      crystal: "assets/img/crystal.png", alienplant: "assets/img/alienplant.png",
-      pod_rest: "assets/img/pod_rest.png",
-      critter_closeup: "assets/img/critter_closeup.png", dust: "assets/img/dust.png", cloth: "assets/img/cloth.png",
-      want_dust: "assets/img/want_dust.png",
-      // per-variant close-up backdrops (antennae recoloured to match each critter's glow)
-      critter_closeup_amber: "assets/img/critter_closeup_amber.png",
-      critter_closeup_aqua: "assets/img/critter_closeup_aqua.png",
-      critter_closeup_lime: "assets/img/critter_closeup_lime.png",
-      critter_closeup_violet: "assets/img/critter_closeup_violet.png",
+      asphalt: "assets/img/asphalt.png", sidewalk: "assets/img/sidewalk.png",
+      crosswalk: "assets/img/crosswalk.png", grass: "assets/img/grass.png",
+      tower_cyan: "assets/img/tower_cyan.png", tower_pink: "assets/img/tower_pink.png",
+      shop_block: "assets/img/shop_block.png", palm: "assets/img/palm.png",
+      garage: "assets/img/garage.png", gas: "assets/img/gas.png", depot: "assets/img/depot.png",
+      hydrant: "assets/img/hydrant.png", streetlamp: "assets/img/streetlamp.png",
+      ramp: "assets/img/ramp.png", want_gas: "assets/img/want_gas.png",
     },
     sheets: {
-      keeper: { path: "assets/sheet/keeper.png", frameWidth: 64, frameHeight: 64 },
-      keeper_amber: { path: "assets/sheet/keeper_amber.png", frameWidth: 64, frameHeight: 64 },
-      critter: { path: "assets/sheet/critter.png", frameWidth: 64, frameHeight: 64 },
-      // antenna-tip recolours of the base critter (body identical, only the tips differ)
-      critter_amber: { path: "assets/sheet/critter_amber.png", frameWidth: 64, frameHeight: 64 },
-      critter_aqua: { path: "assets/sheet/critter_aqua.png", frameWidth: 64, frameHeight: 64 },
-      critter_lime: { path: "assets/sheet/critter_lime.png", frameWidth: 64, frameHeight: 64 },
-      critter_violet: { path: "assets/sheet/critter_violet.png", frameWidth: 64, frameHeight: 64 },
-      fence: { path: "assets/sheet/fence.png", frameWidth: 32, frameHeight: 32 },
+      player_vice: { path: "assets/sheet/player_vice.png", frameWidth: 64, frameHeight: 64 },
+      player_cyan: { path: "assets/sheet/player_cyan.png", frameWidth: 64, frameHeight: 64 },
+      car: { path: "assets/sheet/car.png", frameWidth: 64, frameHeight: 64 },
     },
   },
-  fence: { sheet: "fence", frames: { post: 0, side: 0, cornerTL: 2, cornerTR: 2 } },
 
-  /* ---- Player (the keeper robot) ---- */
+  /* ---- Player (on foot; faster once behind the wheel) ---- */
   player: {
     scale: 1.7,
-    speed: { walk: 210, run: 380 },
-    spawn: { x: 440, y: 660 },
-    nameY: -112,                 // keep the name label above the keeper's head
+    speed: { walk: 200, run: 330, rideWalk: 360, rideRun: 560 },
+    spawn: { x: 1200, y: 1020 },
+    nameY: -104,
   },
   characters: [
-    { id: "aqua", name: "Bolt", sheet: "keeper", thumb: "keeper_thumb" },
-    { id: "amber", name: "Sol", sheet: "keeper_amber", thumb: "keeper_amber_thumb" },
+    { id: "vice", name: "Vince", sheet: "player_vice", thumb: "vice_thumb" },
+    { id: "cyan", name: "Neo",   sheet: "player_cyan", thumb: "cyan_thumb" },
   ],
 
-  /* ---- Creature system (3 needs, 3 actions, antenna variants, aging) ---- */
+  /* ---- "Creatures" = CARS you can drive (ride) ----
+     Fuel is the ride fatigue need; it drains as you drive and refills at the
+     gas station / overnight in the garage. Low fuel pops a ⛽ warning bubble.
+     No mood heart, no aging, no breeding — cars are vehicles, not pets. ---- */
   creature: {
-    label: "critters", icon: "👾",
-    sheet: "critter",
-    scale: 1.0,
-    origin: { x: 0.5, y: 0.78 },
-    walk: { start: 0, end: 3, frameRate: 6 },
-    // Critters hatch tiny and grow to full size over a few cycles.
-    aging: { adultAge: 4, scaleBaby: 0.55, scaleAdult: 1.0 },
-    youngLabel: "🐣 Hatchling", adultLabel: "🌟 Grown",
-    // Mood = average of the three needs (the coloured heart above each critter).
-    // joy is the MOOD_NEED: maxing it (via Play) triggers the little celebration,
-    // and it gently drifts each cycle depending on how well the other needs are kept up.
-    moodNeed: "joy",
-    moodFrom: ["fuel", "shine", "joy"],
-    moodDay: { base: -8, lowPenalty: -8, lowAt: 25, highBonus: 6, highAt: 60 },
-    // Three clear needs, each looked after by exactly ONE action:
-    //   🔋 Energy ← Feed   ·   ✨ Sparkle ← Polish (zoom)   ·   🎮 Fun ← Play
+    label: "voitures", icon: "🚗",
+    sheet: "car",
+    scale: 1.35,
+    origin: { x: 0.5, y: 0.6 },
+    walk: { start: 0, end: 3, frameRate: 5 },   // subtle headlight/idle animation
+    showBars: true,                              // show the fuel gauge in the panel
+
+    // a single "need": fuel. Refills fully overnight (perDay caps at 100).
     needs: [
-      { id: "fuel", icon: "🔋", start: 70, perDay: -22 },
-      { id: "shine", icon: "✨", start: 65, perDay: -18 },
-      { id: "joy", icon: "🎮", start: 80 },
+      { id: "fuel", icon: "⛽", start: 100, perDay: 100 },
     ],
-    // A dusty critter intermittently pops a "polish me" bubble (Sparkle low) — it cues
-    // the close-up. The coloured mood heart stays on alongside it (wantBubble.withMood).
-    wantBubble: { sprite: "want_dust", need: "shine", below: 45, withMood: true,
-      intermittent: true, scale: 0.6, lift: 30, showFor: 2.6, hideMin: 5, hideMax: 10 },
-    // Rest with EVERYONE happy → a synchronized send-off and a special morning line.
-    allHappy: { mood: 75, message: "🌟 Cycle {day}: every critter is glowing — what a wonderful day! ✨" },
-    // Variants in SHEET mode: only the ANTENNA TIPS are recoloured (body stays the
-    // same) — a tasteful detail rather than tinting the whole creature. "rose" is the
-    // base sheet; the others are antenna-recoloured copies. New critters get a random one.
-    // sheet = recoloured antenna spritesheet (in-world); closeupBg = matching zoom backdrop
+
+    // low-fuel warning bubble (replaces the mood heart entirely — cars have no mood).
+    wantBubble: { sprite: "want_gas", need: "fuel", below: 30, intermittent: true,
+      scale: 0.55, lift: 18, showFor: 2.4, hideMin: 5, hideMax: 11 },
+
+    // repaint your ride (GTA "Pay'n'Spray") — the variant is the paint colour.
     variants: [
-      { id: "rose", name: "Rose", color: "#ff5db1" },
-      { id: "amber", name: "Amber", color: "#ffc24a", sheet: "critter_amber", closeupBg: "critter_closeup_amber" },
-      { id: "aqua", name: "Aqua", color: "#3fe0e8", sheet: "critter_aqua", closeupBg: "critter_closeup_aqua" },
-      { id: "lime", name: "Lime", color: "#8df06b", sheet: "critter_lime", closeupBg: "critter_closeup_lime" },
-      { id: "violet", name: "Violet", color: "#b58bff", sheet: "critter_violet", closeupBg: "critter_closeup_violet" },
+      { id: "silver", name: "Argent", color: "#dcdce4" },                     // base sheet, no tint
+      { id: "red",    name: "Rouge",  color: "#e24a4a", tint: "#e24a4a" },
+      { id: "blue",   name: "Bleue",  color: "#4a96f0", tint: "#4a96f0" },
+      { id: "yellow", name: "Jaune",  color: "#facd46", tint: "#facd46" },
+      { id: "green",  name: "Verte",  color: "#5ac878", tint: "#5ac878" },
+      { id: "purple", name: "Violet", color: "#b06cf0", tint: "#b06cf0" },
     ],
-    variantLabel: "Antennae",
+    variantLabel: "Couleur",
     customize: { rename: true, variant: true },
-    customizeTitle: "🎨 Customize",
-    customizedMessage: "{name} looks great! ✨",
+    customizeTitle: "🎨 Atelier peinture",
+    customizedMessage: "{name} est comme neuve ! ✨",
+
     actions: [
-      // Quick in-world taps — each tops up one need only.
-      { id: "feed", label: "Feed", icon: "🔋",
-        effects: { fuel: 38 }, stat: "feed",
-        // themed particles: little cyan energy sparks float up as it recharges
-        anim: { motion: "nod", particle: "spark", colors: ["#9fe8ff", "#6fb7e8", "#ffffff"], count: 6, y0: 38 },
-        message: "{name} recharged happily! 🔋" },
-      { id: "play", label: "Play", icon: "🎮",
-        effects: { joy: 30 }, stat: "play",
-        // themed particles: a burst of STARS instead of hearts
-        anim: { motion: "hop", particle: "star", colors: ["#fff2a8", "#ffd24a", "#a8e6ff", "#ff5db1"], count: 7 },
-        message: "{name} had fun! 🎮", celebrateMessage: "{name} glows with joy! ✨" },
-      // ⭐ the signature CLOSE-UP "moment fort": zoom in and scrub off the cosmic dust by hand
-      { id: "polish", type: "closeup", label: "Polish", icon: "✨", stat: "polish",
-        closeup: {
-          bg: "critter_closeup", spotSprite: "dust", brush: "cloth", brushTip: { x: 0.5, y: 0.4 },
-          spots: { base: 4, growEvery: 2, max: 10, rubs: 3, size: 76, area: { x: 0.25, y: 0.32, w: 0.50, h: 0.40 } },
-          finishParticles: ["⭐", "✨", "💫"],
-        },
-        effects: { shine: 100 },
-        message: "{name} is sparkling clean! ✨" },
-      // open the customize menu (recolour the glow / rename) — no effect on needs
-      { id: "style", type: "customize", label: "Style", icon: "🎨" },
+      { id: "drive", type: "ride", label: "Conduire", icon: "🚗" },
+      { id: "boost", type: "jump", label: "Saut cascade", icon: "🌟" },
+      { id: "paint", type: "customize", label: "Peinture", icon: "🎨" },
     ],
-    celebrate: { mode: "hop", particle: "star", colors: ["#fff2a8", "#ffd24a", "#a8e6ff"], count: 7 },
-    names: ["Zib", "Quor", "Lumi", "Vex", "Orbit", "Pulse", "Nova", "Echo", "Bly", "Pixl"],
-    startCount: 3,
-    // A mix to show off growth: two grown critters and one fresh hatchling (grows over ~4 cycles).
-    startCreatures: [{ name: "Zib", variant: "aqua", age: 6 }, { name: "Lumi", variant: "rose", age: 5 }, { name: "Pulse", variant: "lime", age: 0 }],
+
+    ride: {
+      fatigueNeed: "fuel",
+      minEnergy: 6,
+      sitY: -30, nameY: -108,
+      mountMessage: "🚗 Tu prends le volant de {name} !",
+      dismountMessage: "🚶 Tu sors de {name}.",
+      dismountLabel: "Descendre",
+      exhaustedMessage: "⛽ Panne sèche ! {name} n'a plus d'essence.",
+      tooTired: "⛽ {name} est à sec — va faire le plein !",
+      jump: { distance: 210, cost: 7, minEnergy: 10, tooTired: "⛽ Pas assez d'essence pour un saut !" },
+    },
+
+    names: ["Comète", "Banshee", "Éclair", "Bolide", "Tornade", "Fusée", "Panthère", "Vipère", "Ouragan", "Météore"],
+    startCount: 5,
+    startCreatures: [
+      { name: "Comète",  variant: "red" },
+      { name: "Banshee", variant: "blue" },
+      { name: "Éclair",  variant: "yellow" },
+      { name: "Bolide",  variant: "green" },
+      { name: "Vipère",  variant: "silver" },
+    ],
   },
 
-  /* ---- Zone (the nursery pen where critters roam) ---- */
+  /* ---- Roaming bounds for the cars (invisible: no fence, no tint) ---- */
   zones: [
-    { id: "pen", home: true, rect: { x: 520, y: 340, w: 780, h: 640 },
-      fence: true, gates: "left", gateA: 0.38, gateB: 0.62,
-      tint: "#1d3a52", tintAlpha: 0.4, label: "Nursery" },
+    { id: "streets", home: true, rect: { x: 240, y: 240, w: 1920, h: 1220 } },
   ],
 
-  /* ---- One station: the recharge pod (rest → next cycle) ---- */
-  stations: [
-    { type: "rest", x: 300, y: 560, sprite: "pod_rest", scale: 1.0, label: "Recharge Pod",
-      box: { dx: -52, dy: -50, w: 104, h: 66 }, action: "nextDay", actionLabel: "🌙 Rest (next cycle)" },
-  ],
-
-  /* ---- A little ambient scenery (crystals & alien plants) ---- */
+  /* ---- Buildings, palms & props (scenery; 5th item = AABB collision box) ---- */
   scenery: [
-    [200, 320, "crystal", 1.3, { dx: -14, dy: -10, w: 28, h: 16 }],
-    [220, 900, "alienplant", 1.2, false],
-    [1480, 360, "crystal", 1.5, { dx: -16, dy: -12, w: 32, h: 18 }],
-    [1560, 820, "alienplant", 1.3, false],
-    [1400, 1080, "crystal", 1.2, { dx: -14, dy: -10, w: 28, h: 16 }],
-    [560, 1120, "alienplant", 1.2, false],
-    [980, 1140, "crystal", 1.1, { dx: -12, dy: -10, w: 24, h: 14 }],
+    // corner towers (collision covers the footprint so you can't drive through)
+    [420,  560,  "tower_cyan", 1.45, { dx: -92, dy: -150, w: 184, h: 150 }],
+    [1980, 560,  "tower_pink", 1.5,  { dx: -88, dy: -140, w: 176, h: 140 }],
+    [420,  1490, "shop_block", 1.5,  { dx: -108, dy: -110, w: 216, h: 100 }],
+    [1980, 1470, "tower_cyan", 1.35, { dx: -84, dy: -138, w: 168, h: 138 }],
+    // palms dotted around the park & sidewalks
+    [700,  700,  "palm", 1.3, { dx: -12, dy: -14, w: 24, h: 16 }],
+    [1720, 700,  "palm", 1.3, { dx: -12, dy: -14, w: 24, h: 16 }],
+    [700,  1030, "palm", 1.3, { dx: -12, dy: -14, w: 24, h: 16 }],
+    [1720, 1030, "palm", 1.3, { dx: -12, dy: -14, w: 24, h: 16 }],
+    [1120, 1010, "palm", 1.2, { dx: -12, dy: -14, w: 24, h: 16 }],
+    [1300, 1010, "palm", 1.2, { dx: -12, dy: -14, w: 24, h: 16 }],
+    // street props
+    [900,  300,  "streetlamp", 1.2, false],
+    [1500, 300,  "streetlamp", 1.2, false],
+    [900,  1360, "streetlamp", 1.2, false],
+    [1500, 1360, "streetlamp", 1.2, false],
+    [770,  470,  "hydrant", 1.1, { dx: -8, dy: -8, w: 16, h: 10 }],
+    [1640, 1180, "hydrant", 1.1, { dx: -8, dy: -8, w: 16, h: 10 }],
+    // stunt ramps on the straightaways (no collision — drive over & hit 🌟)
+    [1200, 470,  "ramp", 1.4, false],
+    [1200, 1150, "ramp", 1.4, false],
   ],
 
-  /* ---- Objectives (kept minimal: one level, a few simple goals) ---- */
+  /* ---- Stations: Garage (sleep→next day, free refuel), Gas (paid refuel),
+         Depot (delivery job → cash). ---- */
+  stations: [
+    { type: "rest", x: 1200, y: 930, sprite: "garage", scale: 1.15, label: "Garage",
+      box: { dx: -84, dy: -62, w: 168, h: 54 },
+      action: "nextDay", actionLabel: "🌙 Dormir (jour suivant)" },
+
+    { type: "gas", x: 350, y: 860, sprite: "gas", scale: 1.1, label: "Station-service",
+      box: { dx: -76, dy: -60, w: 152, h: 54 },
+      action: "custom", actionLabel: "⛽ Faire le plein (−💵15)",
+      onUse: function (state, api) {
+        var cost = 15;
+        if ((state.coins || 0) < cost) { api.message("💸 Pas assez d'argent pour l'essence !"); return; }
+        state.coins -= cost;
+        (state.creatures || []).forEach(function (c) { c.fuel = 100; });
+        api.message("⛽ Plein fait pour toutes tes voitures ! (−💵" + cost + ")");
+        api.refreshHud(); api.save();
+      } },
+
+    { type: "depot", x: 2060, y: 860, sprite: "depot", scale: 1.1, label: "Dépôt",
+      box: { dx: -84, dy: -66, w: 168, h: 58 },
+      action: "custom", actionLabel: "📦 Prendre une livraison (+💵35)",
+      onUse: function (state, api) {
+        var pay = 35;
+        state.coins += pay;
+        state.stats.jobs = (state.stats.jobs || 0) + 1;
+        var lines = ["📦 Livraison réussie ! +💵" + pay, "📦 Colis livré à temps ! +💵" + pay, "📦 Beau boulot, chauffeur ! +💵" + pay];
+        api.message(lines[(state.stats.jobs - 1) % lines.length]);
+        api.refreshHud(); api.save();
+      } },
+  ],
+
+  /* ---- Economy ---- */
+  economy: { startCoins: 20, startResources: {}, startCapacity: 9, dayReward: 40 },
+
+  /* ---- Missions (objectives) ---- */
   objectives: {
+    extraStats: ["ride", "jump", "jobs"],
     levels: [
-      { name: "Caretaker", goals: [
-        { id: "feed1", name: "First charge", desc: "Feed a critter", check: (s) => s.stats.feed >= 1 },
-        { id: "play1", name: "Playtime", desc: "Play with a critter", check: (s) => s.stats.play >= 1 },
-        { id: "polish1", name: "Sparkle clean", desc: "Polish a critter", check: (s) => s.stats.polish >= 1 },
-        { id: "happy", name: "All aglow", desc: "Get a critter's mood fully up", check: (s) => s.creatures.some((c) => (c.fuel + c.shine + c.joy) / 3 >= 85) },
+      { name: "Bleu", goals: [
+        { id: "drive1", name: "Première virée", desc: "Monte dans une voiture", check: (s) => (s.stats.ride || 0) >= 1 },
+        { id: "stunt1", name: "Cascadeur", desc: "Réussis un saut cascade 🌟", check: (s) => (s.stats.jump || 0) >= 1 },
+        { id: "job3",   name: "Livreur", desc: "Fais 3 livraisons au Dépôt", check: (s) => (s.stats.jobs || 0) >= 3 },
+        { id: "cash150", name: "Premier magot", desc: "Aie 💵150 en poche", check: (s) => (s.coins || 0) >= 150 },
+      ] },
+      { name: "Caïd", goals: [
+        { id: "job8",   name: "Roi de la route", desc: "Fais 8 livraisons en tout", check: (s) => (s.stats.jobs || 0) >= 8 },
+        { id: "stunt5", name: "Roi de la cascade", desc: "Réussis 5 sauts cascade", check: (s) => (s.stats.jump || 0) >= 5 },
+        { id: "day3",   name: "Increvable", desc: "Atteins le Jour 3", check: (s) => (s.day || 1) >= 3 },
+        { id: "cash400", name: "Gros bonnet", desc: "Aie 💵400 en poche", check: (s) => (s.coins || 0) >= 400 },
       ] },
     ],
   },
 
-  /* ---- Help screen ---- */
+  /* ---- Help ---- */
   help: [
-    "<b>Welcome to your space nursery!</b>",
-    "<b>🚀 Move:</b> tap where you want to go (your keeper floats there). You can also tap a critter directly. (Keyboard: arrows or WASD/ZQSD.)",
-    "<b>👾 Three needs:</b> 🔋 Energy (Feed), 🎮 Fun (Play) and ✨ Sparkle (Polish). The heart over each critter shows its mood — keep it green!",
-    "<b>✨ Polish:</b> when a critter gathers cosmic dust it pops a ✨ bubble. Tap it to zoom right in and rub the dust off with your finger until it sparkles!",
-    "<b>🎨 Style:</b> tap a critter then 🎨 Style to rename it or change its antenna colour.",
-    "<b>🐣 Growing up:</b> hatchlings start tiny and grow to full size over a few cycles — look after them as they grow!",
-    "<b>🌙 Recharge Pod:</b> rest to reach the next cycle. Send everyone to sleep happy for a glowing send-off! ✨",
-    "<b>🤖 (top):</b> change your keeper. 💾 The game saves automatically.",
+    "<b>Bienvenue à Neon City !</b> Une petite ville en vue de dessus où tu roules, livres et cascades. 🚗",
+    "<b>🚶 Se déplacer :</b> touche l'endroit où aller (ton perso s'y rend). Double-tape pour courir. (Clavier : flèches ou ZQSD/WASD.)",
+    "<b>🚗 Conduire :</b> approche une voiture et appuie sur « Conduire ». On roule plus vite en voiture ! ⛽ L'essence baisse en roulant.",
+    "<b>🌟 Saut cascade :</b> au volant, appuie sur « Saut cascade » pour bondir — vise une rampe pour le style !",
+    "<b>⛽ Essence :</b> quand une voiture est presque à sec, une bulle ⛽ apparaît. Va à la <b>Station-service</b> pour faire le plein (ou dors au Garage).",
+    "<b>📦 Dépôt :</b> prends des livraisons pour gagner de l'💵argent.",
+    "<b>🎨 Peinture :</b> sélectionne une voiture puis « Peinture » pour la renommer ou changer sa couleur.",
+    "<b>🌙 Garage :</b> dors pour passer au jour suivant — tes voitures refont le plein et tu touches ta paie.",
+    "<b>🎯 Missions :</b> ouvre le menu 🎯 pour voir tes objectifs. 💾 La partie se sauvegarde toute seule.",
   ],
 };

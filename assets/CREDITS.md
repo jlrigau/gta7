@@ -1,23 +1,27 @@
 # Asset credits
 
-The engine ships a minimal demo game, **Nebula Nursery**. **All of its textures are
-generated procedurally** and original to this repo — nothing is reused from any other
-game's art. They are dedicated to the public domain (**CC0**).
+The current game, **GTA 7 · Neon City**, is a top-down neon-city driving game.
+**All of its textures are generated procedurally** with Pillow and original to this
+repo — nothing is reused from any other game's art. They are dedicated to the public
+domain (**CC0**).
+
+Generation scripts: `tools/gen_chars.py` (character walkcycles) and
+`tools/gen_world.py` (city, cars, buildings, props, icons).
 
 | Asset | File | Notes |
 | --- | --- | --- |
-| Metal/starfield ground | `assets/img/ground.png` | tileable |
-| Neon energy floor | `assets/img/energy.png` | tileable path/patch |
-| Keeper robot (2 colours) | `assets/sheet/keeper.png`, `keeper_amber.png` | 64×64 walkcycle (hovering) |
-| Keeper thumbnails | `assets/ui/keeper_thumb.png`, `keeper_amber_thumb.png` | menu portraits |
-| Alien critter | `assets/sheet/critter.png` | 64×64, 4-frame bob; recoloured by tint if variants are added |
-| Energy barrier | `assets/sheet/fence.png` | 32×32 glowing posts |
-| Recharge pod | `assets/img/pod_rest.png` | sci-fi building |
-| Crystal, alien plant | `assets/img/crystal.png`, `alienplant.png` | scenery |
+| Street characters (2) | `assets/sheet/player_vice.png`, `player_cyan.png` | 64×64 LPC walkcycle |
+| Character thumbnails | `assets/ui/vice_thumb.png`, `cyan_thumb.png` | menu portraits |
+| Car | `assets/sheet/car.png` | 64×64 top-down car; recoloured per paint variant via tint |
+| Road / sidewalk / crosswalk / park | `assets/img/asphalt.png`, `sidewalk.png`, `crosswalk.png`, `grass.png` | tileable |
+| Neon buildings | `assets/img/tower_cyan.png`, `tower_pink.png`, `shop_block.png` | top-down, baked soft shadow |
+| Stations | `assets/img/garage.png`, `gas.png`, `depot.png` | sleep / refuel / delivery job |
+| Street props | `assets/img/palm.png`, `streetlamp.png`, `hydrant.png`, `ramp.png` | scenery; ramp = stunt |
+| Low-fuel bubble | `assets/img/want_gas.png` | "needs gas" indicator over a car |
 | App icons | `assets/favicon.png`, `assets/apple-touch-icon.png` | generated |
 
-Generation script: Pillow (see commit history / the `new-game` skill for how the demo's
-textures and icons are produced).
+Generic reusable engine building blocks kept for future iteration:
+`assets/img/ground.png` (tile) and `assets/sheet/fence.png` (32×32).
 
 ## Engine dependency
 - **Phaser 3** (v3.80.1) is vendored at `vendor/phaser.min.js` — MIT license,

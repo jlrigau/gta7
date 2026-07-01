@@ -1,14 +1,15 @@
-# 🎮 Game Engine
+# 🚗 GTA 7 · Neon City
 
-A **template repository** for building small top-down 2D games (Phaser 3, 100% static,
-no build). The engine is generic: you don't code a game, you **describe** it in one
-config file (`game.config.js`) + assets — or just run the **`/new-game`** skill and
-answer a few questions.
+A small **top-down neon-city driving game** (Phaser 3, 100% static, no build). On foot you
+roam the streets, hop into a car, tear around the block, pull **stunt jumps**, run
+**deliveries** for cash and tick off **missions** — keep an eye on your fuel! Cartoon /
+arcade tone, no explicit content. **The game itself is in French.** For ages **10+**.
 
-It ships with a working demo, **Nebula Nursery** (a keeper robot tends glowing alien
-critters in a space nursery), so a new game starts from something that already runs.
+▶ **[Play GTA 7 · Neon City](https://jlrigau.github.io/gta7/)**
 
-▶ **[Play the live demo](https://jlrigau.github.io/game-engine/)**
+This game is built on a small, reusable **2D game engine**: you don't code a game, you
+**describe** it in one config file (`game.config.js`) + assets — or run the **`/new-game`**
+skill. The rest of this README explains how to make your own game on the same engine.
 
 ---
 

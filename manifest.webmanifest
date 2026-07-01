@@ -1,13 +1,13 @@
 {
-  "name": "Nebula Nursery",
-  "short_name": "Nebula",
-  "lang": "en",
+  "name": "GTA 7 · Neon City",
+  "short_name": "GTA7",
+  "lang": "fr",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0e1430",
-  "theme_color": "#171036",
+  "background_color": "#160f28",
+  "theme_color": "#160f28",
   "icons": [
     { "src": "assets/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
     { "src": "assets/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

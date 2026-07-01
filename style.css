@@ -1,19 +1,19 @@
-/* ===== Generic engine — demo theme "Nebula Nursery" (space / neon) ===== */
+/* ===== GTA 7 · Neon City — top-down neon-night city theme ===== */
 /* Visual theme lives entirely in this stylesheet: restyle it for a new game. */
 
 :root {
-  --deep: #0e1430;
-  --panel: #1b2545;
-  --panel2: #243056;
-  --neon: #3fe0e8;
-  --neon2: #ff5db1;
-  --accent: #ffc24a;
+  --deep: #160f28;
+  --panel: #211a3c;
+  --panel2: #2c2350;
+  --neon: #38e0e6;
+  --neon2: #ff4d97;
+  --accent: #ffcf3f;
   --good: #6ef0a0;
-  --warn: #ffc24a;
+  --warn: #ffcf3f;
   --bad: #ff6a8a;
-  --border: #38477a;
-  --text: #dfe7ff;
-  --muted: #93a0cf;
+  --border: #453a72;
+  --text: #eae4ff;
+  --muted: #a79cd6;
   --shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
 }
 
@@ -30,9 +30,9 @@ html { background: var(--deep); }
 body {
   margin: 0; color: var(--text);
   background-color: var(--deep);
-  background-image: radial-gradient(1200px 800px at 30% -10%, #221a4d 0%, rgba(34,26,77,0) 60%),
-                    radial-gradient(1000px 700px at 100% 110%, #102a4a 0%, rgba(16,42,74,0) 55%),
-                    linear-gradient(180deg, #141038 0%, #0e1430 100%);
+  background-image: radial-gradient(1200px 800px at 25% -10%, #3a1c5c 0%, rgba(58,28,92,0) 60%),
+                    radial-gradient(1000px 700px at 100% 110%, #10344f 0%, rgba(16,52,79,0) 55%),
+                    linear-gradient(180deg, #1a1136 0%, #160f28 100%);
   background-attachment: fixed;
   overflow: hidden;
 }
