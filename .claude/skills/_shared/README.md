@@ -1,0 +1,52 @@
+# Shared skill tooling
+
+Reusable building blocks for the **Claude Code skills** of this game engine
+(`.claude/skills/<name>/SKILL.md`). The scripts are plain Node / Python / bash,
+run by Claude Code through the **Bash** tool.
+
+| File | Role |
+| --- | --- |
+| `serve.sh` | Serve the game statically: `bash .claude/skills/_shared/serve.sh [port]` (def. 8099). |
+| `bump-version.mjs` | Bump the cache version `vN` in **both places** (`assetVersion` in game.config.js + every `?v=` in index.html). `node .claude/skills/_shared/bump-version.mjs`. |
+| `playtest.cjs` | Headless Playwright harness: starts a game, takes zone screenshots (`--shots`), checks trail-loop walkability (`--walk`), evaluates expressions (`--eval`), runs assertions (`--probe`), picks the browser engine (`--engine`) and emulates a device (`--device`), and **reports page errors**. |
+| `separation-audit.cjs` | Prove the engine/game boundary: engine.js has no game text, game.config.js no engine logic, the shell body stays neutral. `node .claude/skills/_shared/separation-audit.cjs` (exit ≠ 0 on a likely leak). Used by **capitalize-learnings**. |
+| `prune-assets.cjs` | List (or `--delete`) files under `assets/` that no game/shell file references — e.g. leftover demo art after **new-game** replaces the demo. Dry-run by default; keeps files referenced by path **or** key. |
+| `sync-engine.sh` | Backport the engine layer (`engine.js`, `ENGINE.md`, `.claude/skills/`) FROM a game repo INTO the template; runs the separation audit + syntax check; never commits. `bash .claude/skills/_shared/sync-engine.sh <game-url|remote> [ref]`. Used by **sync-engine**. |
+
+## Requirements
+- `python3` (static server), `node` + **Playwright** (Chromium); for asset skills:
+  `Pillow`/`numpy` (image slicing/generation).
+- Playwright is found via `require("playwright")` then `/opt/node22/lib/node_modules/playwright`.
+- The harness loads the game over a static server; if outbound HTTPS goes through a
+  proxy it points the browser at `HTTPS_PROXY` automatically (Chromium via a CLI flag,
+  WebKit/Firefox via `launch.proxy`). Phaser is **vendored locally**
+  (`vendor/phaser.min.js`), so tests don't depend on a CDN.
+
+## Testing on the real Safari engine (WebKit) — for iOS bugs
+Some touch/pointer bugs **do not reproduce in headless Chromium** (e.g. the implicit
+pointer-capture *freeze* and the blue text-selection in the close-up — see ENGINE.md
+"iOS / touch robustness"). Drive the actual Safari engine instead:
+```bash
+node .claude/skills/_shared/playtest.cjs --engine webkit --device "iPhone 13" \
+  --probe ./touch-scenario.cjs
+```
+- `--engine chromium|webkit|firefox` (def. chromium); `--device "iPhone 13"` adds the
+  touch/UA/viewport profile (any Playwright device name works).
+- **One-time install** of the WebKit binary (it is not bundled):
+  `npx playwright install webkit` then `npx playwright install-deps webkit`
+  (or, with the vendored CLI: `node /opt/node22/lib/node_modules/playwright/cli.js install webkit`).
+  The harness prints this hint and exits 3 if WebKit is missing.
+- In a probe, drive touch with **real pointer events** (`page.mouse` / dispatched
+  `pointerdown`/`pointermove`/`pointerup`), not `page.fill`, to actually exercise the bug.
+
+## Engine globals exposed to `page.evaluate`
+`GAME` (the config), `state`, `player`, `COLLISIONS`, `WORLD`, `PATHS`, `LOOP_SEG`,
+`OPENINGS`, `LOGS`, `sc`, `onPointer`, `creatureAction`, …
+
+## Full example
+```bash
+bash .claude/skills/_shared/serve.sh 8099
+node .claude/skills/_shared/playtest.cjs --walk \
+  --shots "spawn:560:860:0.9,pen:1210:300:0.8,arena:2010:760:0.8"
+```
+The JSON report lists screenshots, walkability and `pageErrors` (exit code ≠ 0 on a page error).
