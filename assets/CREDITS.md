@@ -5,8 +5,9 @@ The current game, **GTA 7 · Neon City**, is a top-down neon-city driving game.
 repo — nothing is reused from any other game's art. They are dedicated to the public
 domain (**CC0**).
 
-Generation scripts: `tools/gen_chars.py` (character walkcycles) and
-`tools/gen_world.py` (city, cars, buildings, props, icons).
+Generation scripts: `tools/gen_chars.py` (character walkcycles),
+`tools/gen_world.py` (city, cars, buildings, props, icons) and `tools/gen_race.py`
+(race pedestrian + traffic cone).
 
 | Asset | File | Notes |
 | --- | --- | --- |
@@ -18,6 +19,8 @@ Generation scripts: `tools/gen_chars.py` (character walkcycles) and
 | Stations | `assets/img/garage.png`, `gas.png`, `depot.png` | sleep / refuel / delivery job |
 | Street props | `assets/img/palm.png`, `streetlamp.png`, `hydrant.png`, `ramp.png` | scenery; ramp = stunt |
 | Low-fuel bubble | `assets/img/want_gas.png` | "needs gas" indicator over a car |
+| Race pedestrian | `assets/sheet/pedestrian.png` | 4-frame side-walk; moving hazard in races |
+| Traffic cone | `assets/img/cone.png` | static hazard on the road during races |
 | App icons | `assets/favicon.png`, `assets/apple-touch-icon.png` | generated |
 
 Generic reusable engine building blocks kept for future iteration:

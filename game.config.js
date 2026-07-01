@@ -25,7 +25,7 @@ window.GAME = {
     tagline: "Roule dans la ville, fais des livraisons, deviens un caïd !",
     saveKey: "gta7-neon-city",
     audience: { minAge: 10, notes: "arcade/cartoon action, top-down driving, mild — no gore, no blood, no explicit content" },
-    assetVersion: "v1",
+    assetVersion: "v2",
     theme: { home: "#160f28", play: "#141024" },
 
     showCoins: true,
@@ -90,11 +90,13 @@ window.GAME = {
       garage: "assets/img/garage.png", gas: "assets/img/gas.png", depot: "assets/img/depot.png",
       hydrant: "assets/img/hydrant.png", streetlamp: "assets/img/streetlamp.png",
       ramp: "assets/img/ramp.png", want_gas: "assets/img/want_gas.png",
+      cone: "assets/img/cone.png",
     },
     sheets: {
       player_vice: { path: "assets/sheet/player_vice.png", frameWidth: 64, frameHeight: 64 },
       player_cyan: { path: "assets/sheet/player_cyan.png", frameWidth: 64, frameHeight: 64 },
       car: { path: "assets/sheet/car.png", frameWidth: 64, frameHeight: 64 },
+      pedestrian: { path: "assets/sheet/pedestrian.png", frameWidth: 64, frameHeight: 64 },
     },
   },
 
@@ -146,7 +148,8 @@ window.GAME = {
     customizedMessage: "{name} est comme neuve ! ✨",
 
     actions: [
-      { id: "drive", type: "ride", label: "Conduire", icon: "🚗" },
+      { id: "drive", type: "ride", label: "Conduire", icon: "🚗", dismountLabel: "Descendre" },
+      { id: "race",  type: "race", label: "Course", icon: "🏁" },
       { id: "boost", type: "jump", label: "Saut cascade", icon: "🌟" },
       { id: "paint", type: "customize", label: "Peinture", icon: "🎨" },
     ],
@@ -172,6 +175,37 @@ window.GAME = {
       { name: "Bolide",  variant: "green" },
       { name: "Vipère",  variant: "silver" },
     ],
+  },
+
+  /* ---- Course : au volant, appuie sur 🏁 pour lancer une course chronométrée.
+         La caméra ZOOME sur la voiture, enchaîne les checkpoints autour du parc
+         avant la fin du temps, en évitant les piétons et les plots sur la route. ---- */
+  race: {
+    time: 50,               // secondes
+    zoom: 1.05,             // vue rapprochée sur la voiture pendant la course
+    reward: 90,             // 💵 gagnés si on termine
+    hitPenalty: 3,          // secondes perdues à chaque collision
+    checkpointRadius: 80,
+    // boucle autour du parc central (toutes ces positions sont sur la route)
+    checkpoints: [
+      { x: 1600, y: 700 }, { x: 1600, y: 1300 }, { x: 800, y: 1300 },
+      { x: 800, y: 700 },  { x: 1200, y: 470 },
+    ],
+    hazards: {
+      coneSprite: "cone", coneScale: 1.15, coneRadius: 24,
+      cones: [
+        { x: 1600, y: 960 }, { x: 1600, y: 1080 }, { x: 1200, y: 1300 },
+        { x: 820, y: 1060 }, { x: 800, y: 940 },   { x: 1400, y: 520 },
+      ],
+      pedestrianSheet: "pedestrian", pedestrianScale: 1.3,
+      pedestrianCount: 8, pedestrianRadius: 34, pedestrianSpeed: 62,
+    },
+    quitLabel: "Abandonner",
+    startMessage: "🏁 Course lancée ! Fonce au checkpoint 1 — évite les piétons et les plots !",
+    checkpointMessage: "✅ Checkpoint {n}/{t} !",
+    hitMessage: "🚧 Aïe ! −{n}s",
+    winMessage: "🏆 Course gagnée ! +💵{r}",
+    loseMessage: "⏱ Temps écoulé ! Course perdue — réessaie !",
   },
 
   /* ---- Roaming bounds for the cars (invisible: no fence, no tint) ---- */
@@ -242,17 +276,17 @@ window.GAME = {
 
   /* ---- Missions (objectives) ---- */
   objectives: {
-    extraStats: ["ride", "jump", "jobs"],
+    extraStats: ["ride", "jump", "jobs", "raceWin"],
     levels: [
       { name: "Bleu", goals: [
         { id: "drive1", name: "Première virée", desc: "Monte dans une voiture", check: (s) => (s.stats.ride || 0) >= 1 },
         { id: "stunt1", name: "Cascadeur", desc: "Réussis un saut cascade 🌟", check: (s) => (s.stats.jump || 0) >= 1 },
         { id: "job3",   name: "Livreur", desc: "Fais 3 livraisons au Dépôt", check: (s) => (s.stats.jobs || 0) >= 3 },
-        { id: "cash150", name: "Premier magot", desc: "Aie 💵150 en poche", check: (s) => (s.coins || 0) >= 150 },
+        { id: "race1",  name: "Pilote", desc: "Gagne une course 🏁", check: (s) => (s.stats.raceWin || 0) >= 1 },
       ] },
       { name: "Caïd", goals: [
         { id: "job8",   name: "Roi de la route", desc: "Fais 8 livraisons en tout", check: (s) => (s.stats.jobs || 0) >= 8 },
-        { id: "stunt5", name: "Roi de la cascade", desc: "Réussis 5 sauts cascade", check: (s) => (s.stats.jump || 0) >= 5 },
+        { id: "race3",  name: "Champion", desc: "Gagne 3 courses", check: (s) => (s.stats.raceWin || 0) >= 3 },
         { id: "day3",   name: "Increvable", desc: "Atteins le Jour 3", check: (s) => (s.day || 1) >= 3 },
         { id: "cash400", name: "Gros bonnet", desc: "Aie 💵400 en poche", check: (s) => (s.coins || 0) >= 400 },
       ] },
@@ -264,6 +298,7 @@ window.GAME = {
     "<b>Bienvenue à Neon City !</b> Une petite ville en vue de dessus où tu roules, livres et cascades. 🚗",
     "<b>🚶 Se déplacer :</b> touche l'endroit où aller (ton perso s'y rend). Double-tape pour courir. (Clavier : flèches ou ZQSD/WASD.)",
     "<b>🚗 Conduire :</b> approche une voiture et appuie sur « Conduire ». On roule plus vite en voiture ! ⛽ L'essence baisse en roulant.",
+    "<b>🏁 Course :</b> au volant, appuie sur « Course » : la caméra zoome sur ta voiture et tu dois enchaîner les checkpoints avant la fin du chrono, en évitant les 🚶 piétons et les 🚧 plots (chaque choc coûte du temps) !",
     "<b>🌟 Saut cascade :</b> au volant, appuie sur « Saut cascade » pour bondir — vise une rampe pour le style !",
     "<b>⛽ Essence :</b> quand une voiture est presque à sec, une bulle ⛽ apparaît. Va à la <b>Station-service</b> pour faire le plein (ou dors au Garage).",
     "<b>📦 Dépôt :</b> prends des livraisons pour gagner de l'💵argent.",

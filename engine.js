@@ -74,6 +74,7 @@ const MOOD_NEED = (CREATURE && CREATURE.moodNeed) || null;
 const MOOD_SHAPE = (CREATURE && CREATURE.moodIcon) || "heart";  // particle shape of the mood indicator
 const WANT = (CREATURE && CREATURE.wantBubble) || null;         // optional "needs care" bubble (image) replacing the mood shape
 const ALL_HAPPY = (CREATURE && CREATURE.allHappy) || null;      // optional day-arc reward when every creature is happy at rest
+const RACE = G.race || null;                                    // optional race mini-mode (checkpoints + timer + hazards)
 const PLAYER_NAME_Y = (G.player && G.player.nameY != null) ? G.player.nameY : -80;  // y offset of the player's name label (above the head)
 
 // Primary playable zone where creatures roam (first zone flagged home, else first).
@@ -439,6 +440,7 @@ let closeupOpen = false, cuState = null, cuPid = null;   // generic close-up min
 let selRing = null;
 let decorObjs = [];
 let COLLISIONS = [];
+let race = null;                                         // active race (see RACE / startRace)
 
 function startPhaser() {
   if (game) { buildWorld(); return; }
@@ -508,6 +510,11 @@ function buildAnims() {
         frameRate: w.frameRate || 6, repeat: -1,
       });
     });
+  }
+  // Race pedestrian walk (side-walk sheet), if a race with pedestrians is configured.
+  const ped = RACE && RACE.hazards && RACE.hazards.pedestrianSheet;
+  if (ped && !sc.anims.exists("race-ped-walk")) {
+    sc.anims.create({ key: "race-ped-walk", frames: sc.anims.generateFrameNumbers(ped, { start: 0, end: 3 }), frameRate: 6, repeat: -1 });
   }
 }
 
@@ -699,6 +706,7 @@ function buildWorld() {
   decorObjs = [];
   COLLISIONS = [];
   placingDecor = null; ghostDecor = null; jumpRunning = false;
+  if (race) { raceHudHide(); race = null; }   // a world rebuild invalidates race objects
 
   // Ground: tiled, extending beyond the world so no gaps show at the edges.
   const ground = (G.world && G.world.groundTile) || "grass";
@@ -931,6 +939,8 @@ function sceneUpdate(time, delta) {
     if (playerName && playerName.y !== PLAYER_NAME_Y) playerName.y = PLAYER_NAME_Y;
   }
 
+  if (race) raceTick(dt, time);
+
   // Trail-visit stat (marked once when the player steps onto the path).
   if (state.stats && PATHS.length && !state.stats.trailVisit && player && onPath(player.x, player.y, 0)) {
     if (statKeys().includes("trailVisit")) { state.stats.trailVisit = 1; refreshHud(); }
@@ -1139,7 +1149,9 @@ function buildPanel() {
     if (isMounted) {
       const rideAct = ACTIONS.find((a) => a.type === "ride");
       const jumpAct = ACTIONS.find((a) => a.type === "jump");
+      const raceAct = ACTIONS.find((a) => a.type === "race");
       actions = (jumpAct ? `<button class="btn btn-accent" data-creature="${jumpAct.id}">${jumpAct.icon || ""} ${jumpAct.label}</button>` : "")
+        + (raceAct ? `<button class="btn ${race ? "btn-secondary" : "btn-giant"}" data-creature="${raceAct.id}">${race ? "🏳️ " + ((RACE && RACE.quitLabel) || "Quit race") : (raceAct.icon || "") + " " + raceAct.label}</button>` : "")
         + `<button class="btn btn-secondary" data-creature="${rideAct.id}">🛑 ${rideAct.dismountLabel || "Get off"}</button>`;
     } else {
       actions = ACTIONS.filter((a) => a.type !== "jump").map((a) => {
@@ -1190,6 +1202,7 @@ function creatureAction(actionId) {
 
   if (a.type === "ride") { toggleRide(c); return; }
   if (a.type === "jump") { doJump(); return; }
+  if (a.type === "race") { if (race) endRace(false); else startRace(); return; }
   if (a.type === "customize") { openCustomize(c); return; }
   if (a.type === "closeup") { openCloseup(c, a); return; }
 
@@ -1255,6 +1268,7 @@ function doJump() {
 }
 
 function dismount(c, exhausted) {
+  if (race) endRace(false, true);
   mounted = null; moveTarget = null; running = false; rideFatigueAcc = 0; jumpRunning = false;
   if (playerSprite) playerSprite.y = 0;
   if (playerShadow) playerShadow.setVisible(true);
@@ -1827,6 +1841,151 @@ function openHelp() {
   const items = (G.help || []).map((h) => `<p>${h}</p>`).join("");
   openModal(META.helpTitle || "❓ How to play", `<div class="help-text">${items}</div>`);
 }
+
+/* ===================== Race mini-mode (config-gated: GAME.race) =====================
+   A timed race while mounted: drive through a sequence of checkpoints before the timer
+   runs out, avoiding hazards (wandering pedestrians + static obstacles on the road).
+   The camera zooms in for a racing view and a guide arrow points at the next checkpoint.
+   Fully generic — checkpoints, timer, zoom, reward and hazards all come from GAME.race. */
+
+function startRace() {
+  if (!RACE || race || !mounted || !sc) return;
+  const cps = (RACE.checkpoints || []).map((p) => ({ x: p.x, y: p.y, r: RACE.checkpointRadius || 70 }));
+  if (!cps.length) return;
+  race = { idx: 0, cps, time: RACE.time || 45, hazards: [], objs: [], hitAt: -9, baseZoom: sc.cameras.main.zoom };
+
+  cps.forEach((cp, i) => {
+    cp.g = sc.add.graphics().setDepth(1);
+    cp.flag = sc.add.text(cp.x, cp.y - cp.r - 10, i === cps.length - 1 ? "🏁" : String(i + 1),
+      { fontSize: "26px", fontFamily: "sans-serif", color: "#fff8ec", fontStyle: "bold", stroke: "#1a1330", strokeThickness: 5 }).setOrigin(0.5).setDepth(99991);
+    race.objs.push(cp.g, cp.flag);
+    drawCheckpoint(cp, i === 0);
+  });
+
+  spawnHazards();
+
+  const arrow = sc.add.triangle(0, 0, 0, -16, 13, 12, -13, 12, 0xffd54a).setDepth(99992);
+  arrow.setStrokeStyle(3, 0x1a1330, 1);
+  race.arrow = arrow; race.objs.push(arrow);
+
+  sc.tweens.add({ targets: sc.cameras.main, zoom: RACE.zoom || 1.1, duration: 500, ease: "Quad.easeOut" });
+  raceHudShow();
+  message(RACE.startMessage || "🏁 Race! Reach checkpoint 1!");
+  panelId = PANEL_DIRTY; refreshInteraction();
+}
+
+function drawCheckpoint(cp, active) {
+  const g = cp.g; if (!g) return;
+  g.clear();
+  const col = active ? 0x3fe0a0 : 0x6a6f92, a = active ? 0.9 : 0.4;
+  g.lineStyle(active ? 7 : 4, col, a); g.strokeCircle(cp.x, cp.y, cp.r);
+  g.fillStyle(col, active ? 0.16 : 0.07); g.fillCircle(cp.x, cp.y, cp.r);
+  if (cp.flag) cp.flag.setAlpha(active ? 1 : 0.5);
+}
+
+function spawnHazards() {
+  const H = RACE.hazards || {};
+  (H.cones || []).forEach((p) => {
+    const spr = H.coneSprite
+      ? sc.add.image(p.x, p.y, H.coneSprite).setOrigin(0.5, 0.9).setScale(H.coneScale || 1).setDepth(p.y)
+      : sc.add.circle(p.x, p.y, 14, 0xf5822c).setDepth(p.y);
+    race.hazards.push({ x: p.x, y: p.y, obj: spr, r: H.coneRadius || 26, kind: "cone" });
+    race.objs.push(spr);
+  });
+  const n = H.pedestrianCount || 0;
+  const z = HOME_ZONE ? HOME_ZONE.rect : { x: 60, y: 60, w: WORLD.w - 120, h: WORLD.h - 120 };
+  for (let i = 0; i < n; i++) {
+    const x = randInt(z.x + 60, z.x + z.w - 60), y = randInt(z.y + 60, z.y + z.h - 60);
+    let spr;
+    if (H.pedestrianSheet) {
+      spr = sc.add.sprite(x, y, H.pedestrianSheet).setScale(H.pedestrianScale || 1.3).setDepth(y);
+      if (sc.anims.exists("race-ped-walk")) spr.play("race-ped-walk");
+    } else spr = sc.add.circle(x, y, 12, 0x4a96f0).setDepth(y);
+    const ang = Math.random() * Math.PI * 2;
+    race.hazards.push({ x, y, obj: spr, r: H.pedestrianRadius || 34, kind: "ped",
+      vx: Math.cos(ang), vy: Math.sin(ang), next: 0, speed: H.pedestrianSpeed || 55 });
+    race.objs.push(spr);
+  }
+}
+
+function raceTick(dt, now) {
+  if (!race) return;
+  if (!mounted) { endRace(false, true); return; }
+
+  race.time -= dt;
+  const z = HOME_ZONE ? HOME_ZONE.rect : { x: 40, y: 40, w: WORLD.w - 80, h: WORLD.h - 80 };
+  race.hazards.forEach((h) => {
+    if (h.kind === "ped") {
+      if (now > h.next) { const a = Math.random() * Math.PI * 2; h.vx = Math.cos(a); h.vy = Math.sin(a); h.next = now + randInt(1200, 3200); }
+      h.x += h.vx * h.speed * dt; h.y += h.vy * h.speed * dt;
+      if (h.x < z.x + 30 || h.x > z.x + z.w - 30) { h.vx *= -1; h.x = clamp(h.x, z.x + 30, z.x + z.w - 30); }
+      if (h.y < z.y + 30 || h.y > z.y + z.h - 30) { h.vy *= -1; h.y = clamp(h.y, z.y + 30, z.y + z.h - 30); }
+      h.obj.x = h.x; h.obj.y = h.y; h.obj.setDepth(h.y);
+      if (h.obj.setFlipX) h.obj.setFlipX(h.vx > 0);
+    }
+    if (now - race.hitAt > 0.9 && Math.hypot(h.x - player.x, h.y - player.y) < h.r) {
+      race.hitAt = now;
+      race.time -= (RACE.hitPenalty || 3);
+      sc.cameras.main.shake(180, 0.012);
+      sc.cameras.main.flash(160, 200, 60, 60);
+      const dx = h.x - player.x, dy = h.y - player.y, d = Math.hypot(dx, dy) || 1;
+      h.x += (dx / d) * 40; h.y += (dy / d) * 40;
+      message((RACE.hitMessage || "🚧 Watch out! -{n}s").replace("{n}", RACE.hitPenalty || 3));
+    }
+  });
+
+  const cp = race.cps[race.idx];
+  if (race.arrow && cp) {
+    const ang = Math.atan2(cp.y - player.y, cp.x - player.x);
+    race.arrow.x = player.x + Math.cos(ang) * 64;
+    race.arrow.y = player.y - 74 + Math.sin(ang) * 40;
+    race.arrow.rotation = ang + Math.PI / 2;
+  }
+
+  if (cp && Math.hypot(cp.x - player.x, cp.y - player.y) < cp.r) {
+    if (cp.g) cp.g.clear(); if (cp.flag) cp.flag.setVisible(false);
+    race.idx++;
+    if (race.idx >= race.cps.length) { endRace(true); return; }
+    sc.cameras.main.flash(120, 80, 240, 160);
+    drawCheckpoint(race.cps[race.idx], true);
+    message((RACE.checkpointMessage || "✅ Checkpoint {n}/{t}!").replace("{n}", race.idx).replace("{t}", race.cps.length));
+  }
+
+  raceHudUpdate();
+  if (race.time <= 0) endRace(false);
+}
+
+function endRace(win, silent) {
+  if (!race) return;
+  const r = race; race = null;
+  r.objs.forEach((o) => o && o.destroy());
+  raceHudHide();
+  if (sc && r.baseZoom != null) sc.tweens.add({ targets: sc.cameras.main, zoom: r.baseZoom, duration: 450, ease: "Quad.easeOut" });
+  if (win) {
+    const reward = RACE.reward || 0;
+    if (reward) state.coins += reward;
+    if (statKeys().includes("raceWin")) state.stats.raceWin = (state.stats.raceWin || 0) + 1;
+    save(); refreshHud();
+    message((RACE.winMessage || "🏆 Race won! +{r}").replace("{r}", reward));
+  } else if (!silent) {
+    message(RACE.loseMessage || "⏱ Time's up! Race over.");
+  }
+  panelId = PANEL_DIRTY; refreshInteraction();
+}
+
+// Race HUD (timer + checkpoint progress) — a small self-contained DOM overlay.
+function raceHudShow() {
+  let el = $("race-hud");
+  if (!el) { el = document.createElement("div"); el.id = "race-hud"; el.className = "race-hud"; document.body.appendChild(el); }
+  el.classList.remove("hidden");
+  raceHudUpdate();
+}
+function raceHudUpdate() {
+  const el = $("race-hud"); if (!el || !race) return;
+  const t = Math.max(0, race.time);
+  el.innerHTML = `<span class="rh-t${t <= 8 ? " low" : ""}">⏱ ${t.toFixed(1)}s</span><span class="rh-cp">🏁 ${race.idx}/${race.cps.length}</span>`;
+}
+function raceHudHide() { const el = $("race-hud"); if (el) el.classList.add("hidden"); }
 
 /* ===================== Boot ===================== */
 

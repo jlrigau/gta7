@@ -23,6 +23,9 @@ of the fields below — every system is optional, so start small and add as you 
 - **Environment**: fenced **arena** with obstacles + a **trail loop** of sand paths in
   a forest band, scattered by a single declarative rule (no bare edges/corners).
 - **Day/night** cycle with rest-gating; **objectives/levels** gamification.
+- **Race mini-mode**: while mounted, a timed run through **checkpoints** with a
+  **camera zoom-in**, a guide arrow, and **hazards to avoid** (wandering pedestrians +
+  static obstacles) that cost time on contact. Reward + `raceWin` stat on finish.
 - **Save** to localStorage with backward-compatible loading; **PWA/iOS** support.
 
 ## Top-level shape
@@ -35,6 +38,7 @@ window.GAME = {
   economy, shop, decor,
   environment,         // arena + trail loop (optional)
   scenery,             // [[x,y,sprite,scale], ...]
+  race,                // timed checkpoint race while mounted (optional)
   objectives, help,
 };
 ```
@@ -256,6 +260,36 @@ path: { width, sand, inset, tile, label, labelY,
         openings:[{x,y,w,h}], logs:{ xs:[...], dec, sprite, scale } },
 ```
 See the **place-scatter** skill for the single-rule vegetation system.
+
+### `race` (optional — timed checkpoint race while mounted)
+Requires a mount (`creature.ride`) and a creature **action of `type:"race"`** (shown while
+mounted, next to jump/dismount — tapping it toggles start/quit). When started, the camera
+**zooms in** (`zoom`), a **timer** counts down, a guide **arrow** floats above the vehicle
+pointing at the current checkpoint, and **hazards** appear on the road. Drive through each
+checkpoint ring in order before time runs out. Hitting a hazard costs `hitPenalty` seconds
+(screen shake + red flash). Finishing all checkpoints awards `reward` coins and increments
+the `raceWin` stat (declare it in `objectives.extraStats` to use it in a goal). Leaving the
+vehicle or running out of gas ends the race. Checkpoint rings are drawn by the engine (no
+art); hazards use config sprites.
+```
+race: {
+  time: 50,                 // seconds on the clock
+  zoom: 1.05,               // camera zoom during the race (higher = closer)
+  reward: 90,               // coins awarded on finish
+  hitPenalty: 3,            // seconds lost per hazard contact
+  checkpointRadius: 80,     // ring radius / how close counts as "reached"
+  checkpoints: [ {x,y}, ... ],          // driven through IN ORDER; last one shows 🏁
+  hazards: {
+    coneSprite: "<img key>", coneScale, coneRadius,   // static obstacles…
+    cones: [ {x,y}, ... ],                             // …at fixed spots
+    pedestrianSheet: "<4-frame side-walk sheet>",      // moving hazards that wander
+    pedestrianScale, pedestrianCount, pedestrianRadius, pedestrianSpeed,
+  },
+  quitLabel, startMessage, checkpointMessage, hitMessage, winMessage, loseMessage,
+}
+```
+Messages interpolate `{n}` (current checkpoint / penalty), `{t}` (total checkpoints) and
+`{r}` (reward). Omit the whole `race` block to disable the mode.
 
 ### `objectives` / `help`
 ```
