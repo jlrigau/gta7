@@ -26,7 +26,13 @@ of the fields below — every system is optional, so start small and add as you 
 - **Race mode (pseudo-3D)**: while mounted, the top-down world is replaced by a
   **behind-the-car arcade racing view** (receding road, neon horizon, roadside billboards)
   rendered on its own canvas. Steer to reach the finish before the timer, dodging
-  **hazards** (pedestrians + cones) that cost time on contact. Reward + `raceWin` stat.
+  **obstacles** that cost time on contact. Reward + `raceWin` stat.
+- **City loop** (all optional, generic): **jobs** (take a delivery → a map destination +
+  guide arrow → drive there to get paid; "hot" jobs pay more but add heat), **police**
+  (a wanted level ⭐ spawns cruisers that chase you → busted on contact), a car
+  **dealership** (buy vehicles with speed/grip/fuel stats — the money sink), and a
+  **garage** Pay'n'Spray (repaint = reset the wanted level). Cars carry `speedMul` /
+  `grip` / `drainMul` that drive the ride speed, race, and fuel burn.
 - **Save** to localStorage with backward-compatible loading; **PWA/iOS** support.
 
 ## Top-level shape
@@ -39,7 +45,8 @@ window.GAME = {
   economy, shop, decor,
   environment,         // arena + trail loop (optional)
   scenery,             // [[x,y,sprite,scale], ...]
-  race,                // timed checkpoint race while mounted (optional)
+  race,                // pseudo-3D behind-the-car race (optional)
+  jobs, police, dealership, garage,   // city loop: deliveries / wanted level / car shop / Pay'n'Spray
   objectives, help,
 };
 ```
@@ -292,6 +299,34 @@ race: {
 ```
 Messages interpolate `{n}` (penalty seconds) and `{r}` (reward). Omit the whole `race`
 block to disable the mode. Needs the generic `.race3d` canvas style in `style.css`.
+The mounted creature's `speedMul` / `grip` scale the race top-speed and steering.
+
+### `jobs` / `police` / `dealership` / `garage` (optional city loop)
+A coherent earn→spend→progress loop, each block optional. Cars (creatures) carry
+`speedMul`, `grip`, `drainMul`, `model` (defaults 1/1/1/null); `newCreature(seed)` accepts
+them, so `startCreatures` and dealership entries can set them. Stations drive the menus via
+`action: "jobBoard" | "dealer" | "garage"` (a generic `openChoice` modal). Income should go
+through `earn(n)` (bumps coins **and** `state.stats.earned` — declare `earned` in
+`extraStats` for grade goals). Needs `.choice-*` + `.heat-hud` styles in `style.css`.
+```
+jobs: {                       // deliveries with a destination on the map
+  radius, title, subtitle,
+  offers: [ { label, sub, pay, hot?, heat? } ],   // "hot" → raises the wanted level
+  dests:  [ { x, y, name } ],                      // a random one is picked per job
+  takenMessage, hotMessage, deliveredMessage("{p}"), busyMessage,
+}
+police: {                     // wanted level + chasing cruisers (state.heat, 0..maxStars)
+  sprite, scale, maxStars, maxUnits, speed, catchRadius, bustSeconds,
+  loseRadius, loseAfter, bustFine, spawnDist, escapedMessage, bustMessage("{f}","{j}"),
+}
+dealership: {                 // buy better cars — the money sink + progression
+  title, subtitle, boughtMessage("{name}"), fullMessage,
+  cars: [ { id, name, price, variant, speedMul, grip, drainMul, range, desc } ],
+}
+garage: { title, subtitle, paintCost, repaintMessage("{c}"), paintedMessage("{c}") }
+// garage repaint recolours state.lastCar (the car you drove in) AND resets the wanted level.
+// creature.ride.jump may add { reward, rewardMessage } so stunts pay a little.
+```
 
 ### `objectives` / `help`
 ```

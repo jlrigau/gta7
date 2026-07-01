@@ -74,7 +74,11 @@ const MOOD_NEED = (CREATURE && CREATURE.moodNeed) || null;
 const MOOD_SHAPE = (CREATURE && CREATURE.moodIcon) || "heart";  // particle shape of the mood indicator
 const WANT = (CREATURE && CREATURE.wantBubble) || null;         // optional "needs care" bubble (image) replacing the mood shape
 const ALL_HAPPY = (CREATURE && CREATURE.allHappy) || null;      // optional day-arc reward when every creature is happy at rest
-const RACE = G.race || null;                                    // optional race mini-mode (checkpoints + timer + hazards)
+const RACE = G.race || null;                                    // optional race mini-mode (pseudo-3D racing view)
+const JOBS = G.jobs || null;                                    // optional delivery jobs (destination on the map)
+const POLICE = G.police || null;                                // optional wanted level + chasing cruisers
+const DEALER = G.dealership || null;                            // optional car dealership (buy better cars)
+const GARAGE = G.garage || {};                                  // Pay'n'Spray + sleep options at the garage
 const PLAYER_NAME_Y = (G.player && G.player.nameY != null) ? G.player.nameY : -80;  // y offset of the player's name label (above the head)
 
 // Primary playable zone where creatures roam (first zone flagged home, else first).
@@ -148,6 +152,11 @@ function newCreature(o = {}) {
     variant: o.variant || (VARIANTS.length ? pick(VARIANTS).id : null),
     age: o.age != null ? o.age : randInt((CREATURE.aging && CREATURE.aging.adultAge) || 5, ((CREATURE.aging && CREATURE.aging.adultAge) || 5) + 4),
     x: 0, y: 0, tx: 0, ty: 0, nextStep: 0, obj: null,
+    // vehicle stats (used by the ride/race/dealership systems; default = base car)
+    speedMul: o.speedMul != null ? o.speedMul : 1,
+    grip: o.grip != null ? o.grip : 1,
+    drainMul: o.drainMul != null ? o.drainMul : 1,
+    model: o.model || null,
   };
   NEEDS.forEach((n) => { c[n.id] = n.start != null ? n.start : 80; });
   placeInHome(c);
@@ -206,6 +215,7 @@ function init() {
     const btn = e.target.closest("button"); if (!btn) return;
     if (btn.dataset.creature) creatureAction(btn.dataset.creature);
     else if (btn.dataset.station) interact({ type: btn.dataset.station, station: true });
+    else if (btn.dataset.choice !== undefined) choicePick(+btn.dataset.choice);
     else if (btn.dataset.shop) buy(btn.dataset.shop);
     else if (btn.dataset.decor) buyDecor(btn.dataset.decor);
     else if (btn.dataset.place) placeDecor();
@@ -280,6 +290,7 @@ function newGame(name, player) {
     day: 1, capacity: ECON.startCapacity || 4,
     creatures: [], decors: [], speed: 1, actionsSinceRest: 0, lastBirth: 0,
     stats: freshStats(), goalsDone: {}, level: 1,
+    heat: 0, job: null, lastCar: null,
   };
   const startN = (CREATURE && CREATURE.startCount) || 0;
   for (let i = 0; i < startN; i++) {
@@ -304,6 +315,8 @@ function continueGame() {
   if (typeof state.capacity !== "number") state.capacity = ECON.startCapacity || 4;
   state.stats = Object.assign(freshStats(), state.stats || {});
   if (!state.goalsDone) state.goalsDone = {};
+  if (typeof state.heat !== "number") state.heat = 0;
+  if (state.job === undefined) state.job = null;
   recalcLevel();
   state.creatures = (state.creatures || []).map((c) => {
     const base = newCreature({}); // ensures any new need fields exist with defaults
@@ -702,6 +715,7 @@ function buildWorld() {
   COLLISIONS = [];
   placingDecor = null; ghostDecor = null; jumpRunning = false;
   if (race) r3Teardown();                     // a world rebuild ends any active race
+  jobMarker = jobArrow = jobFlag = null; policeUnits = []; busting = 0; evadeT = 0;
 
   // Ground: tiled, extending beyond the world so no gaps show at the edges.
   const ground = (G.world && G.world.groundTile) || "grass";
@@ -758,6 +772,10 @@ function buildWorld() {
 
   sc.cameras.main.startFollow(player, true, 0.5, 0.5);
   fitZoom();
+
+  // Rebuild city-system visuals after a world (re)build.
+  if (JOBS && state.job) buildJobVisual();
+  if (POLICE) refreshHeat();
 }
 
 /* ===================== Creature objects ===================== */
@@ -885,7 +903,8 @@ function sceneUpdate(time, delta) {
   let mvx = 0, mvy = 0;
   if (!jumpRunning) {
     const sp = (G.player && G.player.speed) || { walk: 200, run: 370, rideWalk: 340, rideRun: 560 };
-    const spd = mounted ? (running ? sp.rideRun : sp.rideWalk) : (running ? sp.run : sp.walk);
+    const carMul = mounted ? (mounted.speedMul || 1) : 1;   // faster cars from the dealership
+    const spd = mounted ? (running ? sp.rideRun : sp.rideWalk) * carMul : (running ? sp.run : sp.walk);
     if (vx || vy) {
       moveTarget = null; pendingInteract = null; running = false;
       const n = Math.hypot(vx, vy); mvx = vx / n; mvy = vy / n;
@@ -921,7 +940,7 @@ function sceneUpdate(time, delta) {
     playerSprite.y = (RIDE.sitY || -58) - arc; playerShadow.setVisible(false);
     if (playerName) playerName.y = (RIDE.nameY || -138) - arc;
     if (RIDE.fatigueNeed) {
-      const rate = (mvx || mvy) ? (running ? 2.4 : 1.1) : 0.3;
+      const rate = ((mvx || mvy) ? (running ? 2.4 : 1.1) : 0.3) * (mounted.drainMul || 1);
       rideFatigueAcc += rate * dt;
       if (rideFatigueAcc >= 1) {
         const dn = Math.floor(rideFatigueAcc); rideFatigueAcc -= dn;
@@ -932,6 +951,12 @@ function sceneUpdate(time, delta) {
   } else if (!mounted) {
     if (playerSprite.y !== 0) { playerSprite.y = 0; playerShadow.setVisible(true); }
     if (playerName && playerName.y !== PLAYER_NAME_Y) playerName.y = PLAYER_NAME_Y;
+  }
+
+  // City systems (skip while a modal / race overlay is up).
+  if (!modalOpen) {
+    if (JOBS) jobTick(dt, time);
+    if (POLICE) policeTick(dt, time);
   }
 
   // Trail-visit stat (marked once when the player steps onto the path).
@@ -1186,7 +1211,10 @@ function interact(target) {
   if (st.action === "nextDay") nextDay();
   else if (st.action === "spawn") spawnCreatures(st);
   else if (st.action === "openShop") openShop();
-  else if (st.action === "custom" && typeof st.onUse === "function") st.onUse(state, { message, refreshHud, save });
+  else if (st.action === "jobBoard") openJobBoard();
+  else if (st.action === "dealer") openDealer();
+  else if (st.action === "garage") openGarage();
+  else if (st.action === "custom" && typeof st.onUse === "function") st.onUse(state, { message, refreshHud, save, earn, addHeat });
 }
 
 function creatureAction(actionId) {
@@ -1234,6 +1262,7 @@ function toggleRide(c) {
   if (RIDE.adultsOnly && isYoung(c)) { message((RIDE.tooYoung || "{name} is too young to ride.").replace("{name}", c.name)); return; }
   if (RIDE.minEnergy && RIDE.fatigueNeed && (c[RIDE.fatigueNeed] || 0) < RIDE.minEnergy) { message((RIDE.tooTired || "{name} is too tired.").replace("{name}", c.name)); return; }
   mounted = c;
+  state.lastCar = c.id;                // remembered by the garage's Pay'n'Spray
   if (RIDE.onMount) Object.keys(RIDE.onMount).forEach((k) => (c[k] = clamp01((c[k] || 0) + RIDE.onMount[k])));
   state.actionsSinceRest = (state.actionsSinceRest || 0) + 1;
   if (statKeys().includes("ride")) state.stats.ride = (state.stats.ride || 0) + 1;
@@ -1250,6 +1279,7 @@ function doJump() {
   if (J.cost && RIDE.fatigueNeed) c[RIDE.fatigueNeed] = clamp01(c[RIDE.fatigueNeed] - J.cost);
   rideFatigueAcc = 0; state.actionsSinceRest = (state.actionsSinceRest || 0) + 1;
   if (statKeys().includes("jump")) state.stats.jump = (state.stats.jump || 0) + 1;
+  if (J.reward) { earn(J.reward); message((J.rewardMessage || "🌟 Belle cascade ! +💵{r}").replace("{r}", J.reward)); }
   jumpRunning = true; moveTarget = null; followCreature = null;
   const dir = (playerFacing === "left") ? -1 : 1;
   const targetX = clamp(player.x + dir * (J.distance || 165), 40, WORLD.w - 40);
@@ -1882,10 +1912,9 @@ function r3Open() {
   r3Resize(); window.addEventListener("resize", r3Resize);
 
   R3.img = {
-    ped: r3Img(H.pedestrianSprite || "ped_front"),
-    cone: r3Img(H.coneSprite || "cone"),
     car: r3Img(RACE.carSprite || "car_back"),
     roadside: (RACE.roadside || []).map((k) => r3Img(k)).filter(Boolean),
+    obst: (H.obstacles || []).map((o) => r3Img(o.sprite)),
   };
   const vt = (typeof variantDef === "function" && variantDef(variantId(mounted))) || {};
   R3.carCanvas = R3.img.car ? r3TintCar(R3.img.car, vt.tint || vt.color || "#dcdce4") : null;
@@ -1893,7 +1922,10 @@ function r3Open() {
   r3BuildTrack();
   const T = RACE.track || {};
   R3.pos = 0; R3.prevPos = 0; R3.playerX = 0; R3.speed = 0;
-  R3.maxSpeed = R3.segLen * 60 * (T.speed || 1.0);
+  // the mounted car's dealership stats shape the race: faster top speed, sharper grip
+  R3.carSpeedMul = (mounted && mounted.speedMul) || 1;
+  R3.grip = (mounted && mounted.grip) || 1;
+  R3.maxSpeed = R3.segLen * 60 * (T.speed || 1.0) * R3.carSpeedMul;
   R3.time = RACE.time || 60; R3.over = false; R3.shake = 0; R3.hitFlash = 0;
 
   R3.input = { left: false, right: false };
@@ -1944,11 +1976,16 @@ function r3BuildTrack() {
     const side = rnd() < 0.5 ? -1 : 1;
     R3.segs[i].sprites.push({ img: road[Math.floor(rnd() * road.length)], offset: side * (1.4 + rnd() * 1.7), scale: 3.4 });
   }
-  const conesEvery = H.coneEvery || 24, pedsEvery = H.pedEvery || 33;
-  for (let i = 45; i < N - 18; i++) {
-    if (R3.img.cone && i % conesEvery === 0) R3.segs[i].obstacles.push({ img: R3.img.cone, offset: rnd() * 1.3 - 0.65, scale: 1.7, hw: 0.26 });
-    if (R3.img.ped && i % pedsEvery === 15) R3.segs[i].obstacles.push({ img: R3.img.ped, offset: rnd() * 1.3 - 0.65, scale: 2.4, hw: 0.22, sway: rnd() * 6.28 });
-  }
+  // Obstacles: a generic list of hazard types (bigger, well-spaced, NO people).
+  // Each type drops one obstacle every `every` segments, always leaving a clear side to pass.
+  (H.obstacles || []).forEach((ob, k) => {
+    const img = R3.img.obst[k]; if (!img) return;
+    const every = ob.every || 30, phase = (ob.phase || 0) % every, spread = ob.spread != null ? ob.spread : 0.55;
+    for (let i = 60; i < N - 24; i++) {
+      if (i % every !== phase) continue;
+      R3.segs[i].obstacles.push({ img, offset: (rnd() * 2 - 1) * spread, scale: ob.scale || 3.5, hw: ob.hw != null ? ob.hw : 0.3 });
+    }
+  });
   R3.finishZ = (N - 12) * R3.segLen;
   for (let i = N - 14; i < N - 10; i++) R3.segs[i].finish = true;
 }
@@ -1969,7 +2006,7 @@ function r3Update(dt) {
   if (Math.abs(R3.playerX) > 1) R3.speed *= (1 - dt * 1.1);          // off-road drag
   R3.pos += R3.speed * dt;
 
-  const steer = dt * (T.steer || 2.4) * (0.35 + R3.speed / R3.maxSpeed);
+  const steer = dt * (T.steer || 2.4) * (R3.grip || 1) * (0.35 + R3.speed / R3.maxSpeed);
   if (R3.input.left) R3.playerX -= steer;
   if (R3.input.right) R3.playerX += steer;
   const seg = R3.segs[Math.floor(R3.pos / R3.segLen)] || R3.segs[0];
@@ -1981,7 +2018,7 @@ function r3Update(dt) {
     const s = R3.segs[i]; if (!s.obstacles.length || s.z <= a || s.z > b) continue;
     s.obstacles.forEach((o) => {
       if (o.dead) return;
-      if (Math.abs(R3.playerX - o.offset) < o.hw + 0.22) {
+      if (Math.abs(R3.playerX - o.offset) < o.hw + 0.16) {
         o.dead = true; R3.speed *= 0.32; R3.time -= (RACE.hitPenalty || 3); R3.shake = 0.4; R3.hitFlash = 0.5;
         message((RACE.hitMessage || "🚧 Aïe ! −{n}s").replace("{n}", RACE.hitPenalty || 3));
       }
@@ -2119,7 +2156,7 @@ function r3End(win, quit) {
   if (!race && !R3.on) return;
   r3Teardown();
   if (win) {
-    const reward = RACE.reward || 0; if (reward) state.coins += reward;
+    const reward = RACE.reward || 0; if (reward) earn(reward);
     if (statKeys().includes("raceWin")) state.stats.raceWin = (state.stats.raceWin || 0) + 1;
     save(); refreshHud();
     message((RACE.winMessage || "🏆 Course gagnée ! +{r}").replace("{r}", reward));
@@ -2133,6 +2170,197 @@ function r3End(win, quit) {
 
 // Thin wrappers so existing call sites (panel toggle, dismount, world rebuild) keep working.
 function endRace(win, silent) { if (!race) return; r3End(!!win, !win && !!silent); }
+
+/* ===================== City systems (config-gated) =====================
+   Coherent GTA-lite loop layered on the generic engine:
+   - JOBS   : take a delivery → a destination marker + guide arrow appear → drive
+              there to get paid. "Hot" jobs pay more but raise the wanted level.
+   - POLICE : a wanted level (⭐) spawns cruisers that chase you; get caught → busted
+              (lose the cargo + a fine). Lose them by out-running them or repainting.
+   - DEALER : buy better cars (speed / grip / fuel-drain) — the money sink + progression.
+   - GARAGE : Pay'n'Spray (repaint = reset the wanted level) + sleep to the next day.
+   All are optional (keyed by GAME.jobs / police / dealership / garage). */
+
+function earn(n) { state.coins += n; state.stats.earned = (state.stats.earned || 0) + n; }
+
+// ---- generic choice menu (used by the depot / dealer / garage) ----
+let choiceOpts = null;
+function openChoice(title, subtitle, options) {
+  choiceOpts = options;
+  let html = subtitle ? `<p class="panel-hint">${subtitle}</p>` : "";
+  html += `<div class="choice-list">`;
+  options.forEach((o, i) => {
+    const price = (o.price != null) ? `<span class="ch-price">${o.price} ${META.coinIcon || "💰"}</span>` : "";
+    html += `<button class="btn choice-btn${o.accent ? " accent" : ""}" data-choice="${i}"${o.disabled ? " disabled" : ""}>
+      <span class="ch-txt"><b>${o.label}</b>${o.sub ? `<small>${o.sub}</small>` : ""}</span>${price}</button>`;
+  });
+  openModal(title, html + `</div>`);
+}
+function choicePick(i) { const o = choiceOpts && choiceOpts[i]; if (!o || o.disabled) return; if (o.onPick) o.onPick(); }
+
+/* ---- Jobs / deliveries (destination on the map) ---- */
+let jobMarker = null, jobArrow = null, jobFlag = null;
+function openJobBoard() {
+  if (!JOBS) return;
+  if (state.job) { message(JOBS.busyMessage || "🚚 Termine d'abord ta livraison !"); return; }
+  openChoice(JOBS.title || "📦 Livraisons", JOBS.subtitle || "Choisis une course :",
+    (JOBS.offers || []).map((of) => ({
+      label: of.label, sub: of.sub, accent: of.hot,
+      onPick: () => { closeModal(); assignJob(of); },
+    })));
+}
+function assignJob(of) {
+  const dests = JOBS.dests || [];
+  const dest = dests[Math.floor(Math.random() * dests.length)] || { x: WORLD.w / 2, y: WORLD.h / 2, name: "?" };
+  state.job = { x: dest.x, y: dest.y, name: dest.name || "", pay: of.pay || 30, hot: !!of.hot };
+  buildJobVisual();
+  if (of.hot) { addHeat(of.heat || 2); message((JOBS.hotMessage || "🔥 Cargaison sensible ! Les flics rôdent. Livre à {d} !").replace("{d}", state.job.name)); }
+  else message((JOBS.takenMessage || "📦 En route ! Livre à {d}.").replace("{d}", state.job.name));
+  refreshHud(); save();
+}
+function clearJob() { state.job = null; clearJobVisual(); }
+function clearJobVisual() { [jobMarker, jobArrow, jobFlag].forEach((o) => o && o.destroy()); jobMarker = jobArrow = jobFlag = null; }
+function buildJobVisual() {
+  clearJobVisual(); if (!state.job || !sc) return;
+  jobMarker = sc.add.graphics().setDepth(1);
+  jobFlag = sc.add.text(state.job.x, state.job.y - 58, "📦", { fontSize: "34px" }).setOrigin(0.5).setDepth(99991);
+  jobArrow = sc.add.triangle(0, 0, 0, -14, 12, 11, -12, 11, 0x4fe0a0).setDepth(99992);
+  jobArrow.setStrokeStyle(3, 0x123a2a, 1);
+}
+function jobTick(dt, now) {
+  if (!state.job || !sc) return;
+  if (jobMarker) {
+    const r = 58 + Math.sin(now / 260) * 6;
+    jobMarker.clear();
+    jobMarker.lineStyle(6, 0x4fe0a0, 0.9); jobMarker.strokeCircle(state.job.x, state.job.y, r);
+    jobMarker.fillStyle(0x4fe0a0, 0.12); jobMarker.fillCircle(state.job.x, state.job.y, r);
+  }
+  if (jobFlag) jobFlag.y = state.job.y - 58 + Math.sin(now / 300) * 4;
+  if (jobArrow) {
+    const ang = Math.atan2(state.job.y - player.y, state.job.x - player.x);
+    jobArrow.x = player.x + Math.cos(ang) * 52;
+    jobArrow.y = player.y - (mounted ? 96 : 72) + Math.sin(ang) * 34;
+    jobArrow.rotation = ang + Math.PI / 2;
+  }
+  if (Math.hypot(state.job.x - player.x, state.job.y - player.y) < (JOBS.radius || 80)) deliver();
+}
+function deliver() {
+  const j = state.job; if (!j) return;
+  earn(j.pay); state.stats.jobs = (state.stats.jobs || 0) + 1;
+  clearJob();
+  message((JOBS.deliveredMessage || "✅ Livré ! +💵{p}").replace("{p}", j.pay));
+  refreshHud(); save();
+}
+
+/* ---- Police / wanted level ---- */
+let policeUnits = [], busting = 0, evadeT = 0;
+function heatMax() { return (POLICE && POLICE.maxStars) || 3; }
+function addHeat(n) { if (!POLICE || !n) return; state.heat = clamp((state.heat || 0) + n, 0, heatMax()); evadeT = 0; refreshHeat(); }
+function refreshHeat() {
+  let el = $("heat-hud");
+  if (!el) { el = document.createElement("div"); el.id = "heat-hud"; el.className = "heat-hud hidden"; document.body.appendChild(el); }
+  const h = state.heat || 0;
+  if (h <= 0 || !POLICE) { el.classList.add("hidden"); return; }
+  el.classList.remove("hidden");
+  el.innerHTML = `<span class="wanted">🚨 ${"⭐".repeat(h)}</span>`;
+}
+function clearPolice() { policeUnits.forEach((u) => u.obj && u.obj.destroy()); policeUnits = []; busting = 0; }
+function spawnPolice(n) {
+  const spr = (POLICE && POLICE.sprite) || "police";
+  for (let k = 0; k < n; k++) {
+    const ang = Math.random() * Math.PI * 2, d = POLICE.spawnDist || 620;
+    const x = clamp(player.x + Math.cos(ang) * d, 60, WORLD.w - 60), y = clamp(player.y + Math.sin(ang) * d, 60, WORLD.h - 60);
+    policeUnits.push({ x, y, obj: sc.add.image(x, y, spr).setScale(POLICE.scale || 1.3).setDepth(y), blink: 0 });
+  }
+}
+function policeTick(dt, now) {
+  if (!POLICE || !sc || !player) return;
+  const heat = state.heat || 0;
+  const want = heat > 0 ? Math.min(heat, POLICE.maxUnits || 4) : 0;
+  while (policeUnits.length < want) spawnPolice(1);
+  while (policeUnits.length > want) { const u = policeUnits.pop(); if (u.obj) u.obj.destroy(); }
+  if (!policeUnits.length) { busting = 0; return; }
+  const speed = (POLICE.speed || 235) * (1 + (heat - 1) * 0.14);
+  let nearest = 1e9;
+  policeUnits.forEach((u) => {
+    const dx = player.x - u.x, dy = player.y - u.y, d = Math.hypot(dx, dy) || 1;
+    if (d > 30) { u.x += (dx / d) * speed * dt; u.y += (dy / d) * speed * dt; }
+    u.x = clamp(u.x, 40, WORLD.w - 40); u.y = clamp(u.y, 40, WORLD.h - 40);
+    u.obj.x = u.x; u.obj.y = u.y; u.obj.setDepth(u.y); u.obj.setFlipX(dx > 0);
+    u.blink += dt; u.obj.setTint((Math.floor(u.blink * 6) % 2) ? 0x99bbff : 0xffffff);
+    nearest = Math.min(nearest, d);
+  });
+  if (nearest < (POLICE.catchRadius || 66)) { busting += dt; evadeT = 0; if (busting >= (POLICE.bustSeconds || 3.5)) busted(); }
+  else busting = Math.max(0, busting - dt * 0.7);
+  if (nearest > (POLICE.loseRadius || 820)) {
+    evadeT += dt;
+    if (evadeT >= (POLICE.loseAfter || 7)) {
+      state.heat = Math.max(0, heat - 1); evadeT = 0; refreshHeat();
+      if (!state.heat) { clearPolice(); message(POLICE.escapedMessage || "🚔 Tu as semé la police !"); save(); }
+    }
+  } else evadeT = 0;
+}
+function busted() {
+  const fine = Math.min(state.coins, POLICE.bustFine || 40), hadJob = !!state.job;
+  state.coins -= fine; clearJob(); state.heat = 0; clearPolice(); refreshHeat(); busting = 0;
+  message((POLICE.bustMessage || "🚔 Arrêté ! −💵{f}{j}").replace("{f}", fine).replace("{j}", hadJob ? " · colis perdu" : ""));
+  refreshHud(); save();
+}
+
+/* ---- Car dealership ---- */
+function ownedModel(id) { return state.creatures.some((c) => c.model === id); }
+function openDealer() {
+  if (!DEALER) return;
+  openChoice(DEALER.title || "🏪 Concession", DEALER.subtitle || "Achète une meilleure caisse :",
+    (DEALER.cars || []).map((m) => {
+      const owned = ownedModel(m.id);
+      return {
+        label: (owned ? "✅ " : "") + m.name, disabled: owned, price: owned ? null : m.price,
+        sub: `⚡${Math.round((m.speedMul || 1) * 100)}% · 🎯${Math.round((m.grip || 1) * 100)}% · ⛽${m.range || "std"}${m.desc ? " · " + m.desc : ""}`,
+        onPick: () => buyCar(m),
+      };
+    }));
+}
+function buyCar(m) {
+  if (ownedModel(m.id)) return;
+  if (state.coins < m.price) { message(META.notEnough || "💸 Pas assez d'argent !"); return; }
+  if (state.creatures.length >= state.capacity) { message(DEALER.fullMessage || "🅿️ Ton garage est plein !"); return; }
+  state.coins -= m.price;
+  const c = newCreature({ variant: m.variant, speedMul: m.speedMul, grip: m.grip, drainMul: m.drainMul, model: m.id });
+  c.x = clamp(player.x + 90, 40, WORLD.w - 40); c.y = clamp(player.y, 40, WORLD.h - 40); c.tx = c.x; c.ty = c.y;
+  state.creatures.push(c); if (sc) buildCreatureObj(c);
+  message((DEALER.boughtMessage || "🔑 {name} est à toi !").replace("{name}", c.name));
+  refreshHud(); save(); openDealer();
+}
+
+/* ---- Garage: Pay'n'Spray (repaint = lose the cops) + sleep ---- */
+function lastCar() { return state.creatures.find((c) => c.id === state.lastCar) || state.creatures[0] || null; }
+function openGarage() {
+  const wanted = (state.heat || 0) > 0, cost = GARAGE.paintCost || 20;
+  openChoice(GARAGE.title || "🏚️ Garage", GARAGE.subtitle || "Que veux-tu faire ?", [
+    { label: "🎨 Repeindre la voiture", accent: wanted, price: cost,
+      sub: wanted ? "Efface l'alerte police ⭐ + nouvelle couleur" : "Nouvelle couleur pour ta caisse",
+      onPick: () => openPaint() },
+    { label: "🌙 Dormir (jour suivant)", sub: "Passe au lendemain", onPick: () => { closeModal(); nextDay(); } },
+  ]);
+}
+function openPaint() {
+  const c = lastCar();
+  if (!c) { message("🚗 Tu n'as pas encore de voiture."); return; }
+  const cost = GARAGE.paintCost || 20;
+  openChoice("🎨 Atelier peinture", "Choisis une couleur :", VARIANTS.map((v) => ({
+    label: v.name, accent: variantId(c) === v.id, sub: variantId(c) === v.id ? "couleur actuelle" : "",
+    onPick: () => {
+      if (state.coins < cost) { message(META.notEnough || "💸 Pas assez d'argent !"); return; }
+      state.coins -= cost; c.variant = v.id; refreshCreatureVisual(c);
+      const hadHeat = (state.heat || 0) > 0; state.heat = 0; clearPolice(); refreshHeat();
+      closeModal();
+      message(hadHeat ? (GARAGE.repaintMessage || "🎨 Repeinte en {c} — les flics perdent ta trace ! 🚔").replace("{c}", v.name)
+                      : (GARAGE.paintedMessage || "🎨 Repeinte en {c} !").replace("{c}", v.name));
+      refreshHud(); save();
+    },
+  })));
+}
 
 /* ===================== Boot ===================== */
 

@@ -1,11 +1,13 @@
 # 🚗 GTA 7 · Neon City
 
-A small **top-down neon-city driving game** (Phaser 3, 100% static, no build). On foot you
-roam the streets, hop into a car, and launch a **timed race** — the view switches to a
-**behind-the-car arcade racing mode** (pseudo-3D road into a neon sunset; dodge the
-pedestrians and cones!). Pull **stunt jumps**, run **deliveries** for cash and tick off
-**missions** — keep an eye on your fuel! Cartoon / arcade tone, no explicit content.
-**The game itself is in French.** For ages **10+**.
+A small **top-down neon-city driving game** (Phaser 3, 100% static, no build). Play as
+**Marco or Nadia**: take **deliveries** (drive to the map marker to get paid), spend your
+cash at the **car dealership** on faster rides, and enter **races** — the view switches to
+a **behind-the-car arcade racing mode** (pseudo-3D road into a neon sunset). Take a **"hot"
+job** for a big payout and the **police** give chase (⭐ wanted level) — outrun them or
+duck into the **garage for a Pay'n'Spray** to shake the heat. Climb the ranks from *Bleu*
+to *Caïd*. Cartoon / arcade tone, no explicit content. **The game itself is in French.**
+For ages **10+**.
 
 ▶ **[Play GTA 7 · Neon City](https://jlrigau.github.io/gta7/)**
 

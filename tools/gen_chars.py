@@ -1,130 +1,143 @@
 #!/usr/bin/env python3
 """Generate top-down street-character walkcycles (LPC 9x4 layout, 64x64 frames).
-Style matches the engine's soft rounded look. 9 cols (0=idle,1-8=walk) x 4 rows
-(row order: up, left, down, right — DIRS in engine.js)."""
+Two distinct, GTA-flavoured characters: a man and a woman — leaner proportions
+(smaller head, defined shoulders/waist, real hairstyles & streetwear) rather than
+chibi. 9 cols (0=idle, 1-8=walk) x 4 rows (up, left, down, right — engine DIRS)."""
 import math, os
 from PIL import Image, ImageDraw
 
 FW = FH = 64
 COLS, ROWS = 9, 4
-CX = 32          # horizontal centre
-BASE = 56        # feet baseline (origin 0.95)
+CX = 32
+BASE = 60          # feet baseline (origin 0.95)
+OUT = (24, 20, 30, 255)
 
-def lerp(a, b, t): return tuple(int(a[i] + (b[i]-a[i])*t) for i in range(len(a)))
-def shade(c, f):   # multiply toward black (f<1) or white (f>1)
-    if f <= 1: return tuple(int(v*f) for v in c[:3]) + (c[3],) if len(c)==4 else tuple(int(v*f) for v in c)
-    return tuple(min(255,int(v+(255-v)*(f-1))) for v in c[:3]) + ((c[3],) if len(c)==4 else ())
+def shade(c, f):
+    if f <= 1: return tuple(int(v*f) for v in c[:3]) + ((c[3],) if len(c) == 4 else ())
+    return tuple(min(255, int(v + (255-v)*(f-1))) for v in c[:3]) + ((c[3],) if len(c) == 4 else ())
 
-def ell(d, cx, cy, rx, ry, fill, outline=None, ow=2):
+def ell(d, cx, cy, rx, ry, fill, outline=None, ow=1):
     d.ellipse([cx-rx, cy-ry, cx+rx, cy+ry], fill=fill, outline=outline, width=ow)
 
-def rrect(d, cx, cy, w, h, r, fill, outline=None, ow=2):
+def rrect(d, cx, cy, w, h, r, fill, outline=None, ow=1):
     d.rounded_rectangle([cx-w/2, cy-h/2, cx+w/2, cy+h/2], radius=r, fill=fill, outline=outline, width=ow)
 
 
-def draw_char(d, direction, phase, C):
-    """direction in up/left/down/right; phase 0..1 walk cycle (None=idle)."""
-    skin, skin_d = C['skin'], shade(C['skin'], 0.8)
-    jak, jak_d, jak_l = C['jacket'], shade(C['jacket'], 0.72), shade(C['jacket'], 1.18)
-    hair = C['hair']
-    pants = C['pants']; pants_d = shade(pants, 0.75)
-    OUT = (28, 24, 36, 255)
+def draw(d, direction, phase, C):
+    female = C.get("female")
+    skin, skin_d = C["skin"], shade(C["skin"], 0.82)
+    jak, jak_d, jak_l = C["jacket"], shade(C["jacket"], 0.7), shade(C["jacket"], 1.18)
+    top = C["top"]
+    pants, pants_d = C["pants"], shade(C["pants"], 0.75)
+    hair, hair_d = C["hair"], shade(C["hair"], 0.78)
+    shoe = C.get("shoe", (36, 34, 42, 255))
 
     walking = phase is not None
-    swing = math.sin(phase*2*math.pi) if walking else 0.0     # leg/arm swing
-    bob = (abs(math.sin(phase*2*math.pi)) * 2) if walking else 0.0
+    sw = math.sin(phase * 2 * math.pi) if walking else 0.0
+    bob = (abs(math.sin(phase * 2 * math.pi)) * 1.6) if walking else 0.0
     yb = BASE - bob
 
-    # ---- legs (behind body) ----
-    legL = swing*4; legR = -swing*4
-    for lx, off in ((-6, legL), (6, legR)):
-        rrect(d, CX+lx, yb-6+off*0.0, 8, 16, 4, pants, OUT, 2)
-        # shoe
-        ell(d, CX+lx, yb-1+max(0,off)*0.2, 5, 3, (34,32,40,255))
-    # apply vertical leg swing (lift)
-    # (redraw with lift handled via off already minimal) -- keep simple
+    shoulders = 8 if female else 10          # half-width at shoulders
+    waist = 5 if female else 7
+    torso_top = yb - 40
+    torso_bot = yb - 16
+    hy = torso_top - 8                        # head centre
+    hr = 7                                    # head radius (smaller → less chibi)
 
-    bodyw, bodyh = 22, 24
-    bodycy = yb - 20
+    def legs():
+        for lx, off in ((-4, sw * 4), (4, -sw * 4)):
+            rrect(d, CX + lx, yb - 9 + max(0, -off) * 0.0, 6, 18, 3, pants, OUT, 1)
+            d.line([CX + lx, yb - 16, CX + lx, yb - 2], fill=pants_d, width=1)
+            ell(d, CX + lx + (1 if off > 0 else 0), yb - 2, 4, 2.4, shoe, OUT, 1)
 
-    if direction in ('down', 'up'):
-        # torso
-        rrect(d, CX, bodycy, bodyw, bodyh, 9, jak, OUT, 2)
-        rrect(d, CX, bodycy, bodyw, bodyh, 9, None, None, 0)
-        # shading down the middle
-        d.line([CX, bodycy-8, CX, bodycy+9], fill=jak_d, width=2)
-        # arms
-        armsw = swing*3
-        for ax, a in ((-13, armsw), (13, -armsw)):
-            ell(d, CX+ax, bodycy-2+a, 5, 9, jak_l, OUT, 2)
-            ell(d, CX+ax, bodycy+6+a, 4, 4, skin)      # hand
+    def torso_front(back=False):
+        # tapered torso: shoulders -> waist
+        pts = [(CX - shoulders, torso_top), (CX + shoulders, torso_top),
+               (CX + waist, torso_bot), (CX - waist, torso_bot)]
+        d.polygon(pts, fill=jak, outline=OUT)
+        if not back:
+            # open jacket showing the top/shirt
+            d.polygon([(CX - 3, torso_top + 1), (CX + 3, torso_top + 1), (CX + 4, torso_bot), (CX - 4, torso_bot)], fill=top)
+            d.line([CX - 3, torso_top + 2, CX - 4, torso_bot], fill=jak_d, width=1)
+            d.line([CX + 3, torso_top + 2, CX + 4, torso_bot], fill=jak_d, width=1)
+            if female:  # waist belt
+                d.line([CX - waist, torso_bot - 2, CX + waist, torso_bot - 2], fill=jak_d, width=1)
+        else:
+            d.line([CX, torso_top + 2, CX, torso_bot - 1], fill=jak_d, width=1)
+        # collar / shoulders highlight
+        d.line([CX - shoulders + 1, torso_top + 1, CX + shoulders - 1, torso_top + 1], fill=jak_l, width=1)
+
+    if direction in ("down", "up"):
+        legs()
+        # arms swing
+        for ax, a in ((-shoulders - 1, sw * 3), (shoulders + 1, -sw * 3)):
+            ell(d, CX + ax, torso_top + 8 + a, 3, 8, jak, OUT, 1)
+            ell(d, CX + ax, torso_top + 14 + a, 2.6, 2.6, skin)     # hand
+        torso_front(back=(direction == "up"))
         # head
-        hy = bodycy - 18
-        ell(d, CX, hy, 11, 11, skin, OUT, 2)
-        if direction == 'down':
-            # hair framing the face
-            d.pieslice([CX-11, hy-11, CX+11, hy+7], 178, 362, fill=hair)
-            # eyes + small smile
-            ell(d, CX-4, hy+2, 1.6, 2.3, (30,28,40,255))
-            ell(d, CX+4, hy+2, 1.6, 2.3, (30,28,40,255))
-            d.arc([CX-4, hy+3, CX+4, hy+9], 20, 160, fill=skin_d, width=1)
-            # cap: brim + shallow crown (forehead stays visible)
-            if C.get('cap'):
-                d.rounded_rectangle([CX-12, hy-4, CX+12, hy-1], radius=2, fill=C['cap'])
-                d.pieslice([CX-11, hy-13, CX+11, hy+1], 182, 358, fill=C['cap'])
-        else:  # up -> back of head, hair (+ cap crown)
-            ell(d, CX, hy, 11, 11, hair, OUT, 2)
-            if C.get('cap'):
-                d.pieslice([CX-11, hy-11, CX+11, hy+9], 182, 358, fill=C['cap'])
-                d.ellipse([CX-11, hy-2, CX+11, hy+4], fill=hair)
+        ell(d, CX, hy, hr, hr + 1, skin, OUT, 1)
+        if direction == "down":
+            # hairline framing the face
+            d.pieslice([CX - hr, hy - hr - 2, CX + hr, hy + hr - 2], 176, 364, fill=hair)
+            if female:
+                d.pieslice([CX - hr - 1, hy - 3, CX - hr + 3, hy + hr + 3], 60, 300, fill=hair)
+                d.pieslice([CX + hr - 3, hy - 3, CX + hr + 1, hy + hr + 3], 240, 480, fill=hair)
+            # face
+            ell(d, CX - 3, hy, 1.3, 1.9, (34, 30, 42, 255))
+            ell(d, CX + 3, hy, 1.3, 1.9, (34, 30, 42, 255))
+            d.arc([CX - 3, hy + 2, CX + 3, hy + 6], 20, 160, fill=skin_d, width=1)
+        else:  # up: back of head
+            ell(d, CX, hy, hr, hr + 1, hair, OUT, 1)
+            if female:  # ponytail down the back
+                ell(d, CX, hy + hr, 3, 6, hair, OUT, 1)
+                ell(d, CX, hy + hr + 5, 2.4, 4, hair_d)
     else:
-        # side view (left drawn; right handled by flip outside)
-        sgn = -1 if direction == 'left' else 1
-        # torso (narrower)
-        rrect(d, CX+sgn*1, bodycy, 17, bodyh, 8, jak, OUT, 2)
+        sgn = -1 if direction == "left" else 1
+        legs()
         # back arm
-        ell(d, CX-sgn*4, bodycy-1-swing*3, 4, 9, jak_d, OUT, 2)
-        # head (profile)
-        hy = bodycy - 18
-        ell(d, CX+sgn*2, hy, 11, 11, skin, OUT, 2)
-        # hair back
-        d.pieslice([CX+sgn*2-11, hy-11, CX+sgn*2+11, hy+7], 90 if sgn>0 else 90, 300, fill=hair)
-        d.chord([CX+sgn*2-11, hy-12, CX+sgn*2+11, hy+4], 150, 390, fill=hair)
-        # face dot (eye)
-        ell(d, CX+sgn*7, hy, 1.6, 2.2, (30,28,40,255))
-        # nose hint
-        ell(d, CX+sgn*10, hy+2, 1.4, 1.4, skin_d)
-        if C.get('cap'):
-            d.pieslice([CX+sgn*2-11, hy-12, CX+sgn*2+11, hy+2], 182, 358, fill=C['cap'])
-            bx0, bx1 = sorted([CX+sgn*2, CX+sgn*14])
-            d.rounded_rectangle([bx0, hy-4, bx1, hy-1], radius=2, fill=C['cap'])
+        ell(d, CX - sgn * 3, torso_top + 8 - sw * 3, 2.6, 8, jak_d, OUT, 1)
+        # torso (profile, slimmer)
+        pts = [(CX - 6, torso_top), (CX + 6, torso_top), (CX + 5, torso_bot), (CX - 5, torso_bot)]
+        d.polygon(pts, fill=jak, outline=OUT)
+        d.polygon([(CX + sgn * 1, torso_top + 1), (CX + sgn * 2, torso_bot)], fill=top)
+        # head profile
+        ell(d, CX + sgn * 1, hy, hr, hr + 1, skin, OUT, 1)
+        d.chord([CX + sgn * 1 - hr, hy - hr - 2, CX + sgn * 1 + hr, hy + hr], 150, 400, fill=hair)
+        ell(d, CX + sgn * 5, hy, 1.2, 1.8, (34, 30, 42, 255))          # eye
+        ell(d, CX + sgn * (hr + 1), hy + 2, 1.2, 1.4, skin_d)          # nose
+        if female:   # ponytail trailing behind
+            ell(d, CX - sgn * (hr - 1), hy + 1, 2.6, 5, hair, OUT, 1)
+            ell(d, CX - sgn * (hr + 1), hy + 5, 2, 3.4, hair_d)
         # front arm
-        ell(d, CX+sgn*4, bodycy-1+swing*3, 4, 9, jak_l, OUT, 2)
-        ell(d, CX+sgn*4, bodycy+7+swing*3, 3.5, 3.5, skin)
+        ell(d, CX + sgn * 3, torso_top + 8 + sw * 3, 2.6, 8, jak_l, OUT, 1)
+        ell(d, CX + sgn * 3, torso_top + 14 + sw * 3, 2.4, 2.4, skin)
 
 
 def build(C, out):
-    sheet = Image.new('RGBA', (FW*COLS, FH*ROWS), (0,0,0,0))
-    order = ['up', 'left', 'down', 'right']
+    sheet = Image.new("RGBA", (FW * COLS, FH * ROWS), (0, 0, 0, 0))
+    order = ["up", "left", "down", "right"]
     for r, direction in enumerate(order):
         for c in range(COLS):
-            frame = Image.new('RGBA', (FW, FH), (0,0,0,0))
+            frame = Image.new("RGBA", (FW, FH), (0, 0, 0, 0))
             d = ImageDraw.Draw(frame)
-            phase = None if c == 0 else (c-1)/8.0
-            drawdir = 'left' if direction in ('left','right') else direction
-            draw_char(d, drawdir, phase, C)
-            if direction == 'right':
+            phase = None if c == 0 else (c - 1) / 8.0
+            drawdir = "left" if direction in ("left", "right") else direction
+            draw(d, drawdir, phase, C)
+            if direction == "right":
                 frame = frame.transpose(Image.FLIP_LEFT_RIGHT)
-            sheet.paste(frame, (c*FW, r*FH), frame)
+            sheet.paste(frame, (c * FW, r * FH), frame)
     sheet.save(out)
-    print('wrote', out, sheet.size)
+    print("wrote", out, sheet.size)
+
 
 CHARS = {
-    'player_vice': dict(skin=(226,178,140,255), jacket=(228,74,96,255), pants=(40,46,66,255),
-                        hair=(46,38,44,255), cap=(250,210,80,255)),
-    'player_cyan': dict(skin=(214,166,128,255), jacket=(60,196,210,255), pants=(38,40,58,255),
-                        hair=(58,44,36,255)),
+    # Man — short dark hair, charcoal leather jacket over a red tee, jeans, boots.
+    "man": dict(skin=(214, 165, 124, 255), jacket=(48, 46, 58, 255), top=(206, 62, 62, 255),
+                pants=(46, 52, 72, 255), hair=(40, 32, 34, 255), shoe=(30, 28, 34, 255)),
+    # Woman — brown ponytail, magenta jacket over a dark top, jeans, sneakers.
+    "woman": dict(female=True, skin=(228, 180, 146, 255), jacket=(214, 66, 128, 255), top=(40, 40, 54, 255),
+                  pants=(52, 58, 80, 255), hair=(84, 52, 38, 255), shoe=(238, 238, 244, 255)),
 }
-os.makedirs('assets/sheet', exist_ok=True)
-build(CHARS['player_vice'], 'assets/sheet/player_vice.png')
-build(CHARS['player_cyan'], 'assets/sheet/player_cyan.png')
+os.makedirs("assets/sheet", exist_ok=True)
+build(CHARS["man"], "assets/sheet/player_man.png")
+build(CHARS["woman"], "assets/sheet/player_woman.png")

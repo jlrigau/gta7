@@ -25,7 +25,7 @@ window.GAME = {
     tagline: "Roule dans la ville, fais des livraisons, deviens un caïd !",
     saveKey: "gta7-neon-city",
     audience: { minAge: 10, notes: "arcade/cartoon action, top-down driving, mild — no gore, no blood, no explicit content" },
-    assetVersion: "v3",
+    assetVersion: "v4",
     theme: { home: "#160f28", play: "#141024" },
 
     showCoins: true,
@@ -90,14 +90,14 @@ window.GAME = {
       garage: "assets/img/garage.png", gas: "assets/img/gas.png", depot: "assets/img/depot.png",
       hydrant: "assets/img/hydrant.png", streetlamp: "assets/img/streetlamp.png",
       ramp: "assets/img/ramp.png", want_gas: "assets/img/want_gas.png",
-      cone: "assets/img/cone.png",
+      cone: "assets/img/cone.png", police: "assets/img/police.png",
       // pseudo-3D race view billboards
-      car_back: "assets/img/car_back.png", ped_front: "assets/img/ped_front.png",
+      car_back: "assets/img/car_back.png",
       bldg_a: "assets/img/bldg_a.png", bldg_b: "assets/img/bldg_b.png",
     },
     sheets: {
-      player_vice: { path: "assets/sheet/player_vice.png", frameWidth: 64, frameHeight: 64 },
-      player_cyan: { path: "assets/sheet/player_cyan.png", frameWidth: 64, frameHeight: 64 },
+      player_man: { path: "assets/sheet/player_man.png", frameWidth: 64, frameHeight: 64 },
+      player_woman: { path: "assets/sheet/player_woman.png", frameWidth: 64, frameHeight: 64 },
       car: { path: "assets/sheet/car.png", frameWidth: 64, frameHeight: 64 },
     },
   },
@@ -110,8 +110,8 @@ window.GAME = {
     nameY: -104,
   },
   characters: [
-    { id: "vice", name: "Vince", sheet: "player_vice", thumb: "vice_thumb" },
-    { id: "cyan", name: "Neo",   sheet: "player_cyan", thumb: "cyan_thumb" },
+    { id: "man",   name: "Marco", sheet: "player_man",   thumb: "man_thumb" },
+    { id: "woman", name: "Nadia", sheet: "player_woman", thumb: "woman_thumb" },
   ],
 
   /* ---- "Creatures" = CARS you can drive (ride) ----
@@ -126,9 +126,10 @@ window.GAME = {
     walk: { start: 0, end: 3, frameRate: 5 },   // subtle headlight/idle animation
     showBars: true,                              // show the fuel gauge in the panel
 
-    // a single "need": fuel. Refills fully overnight (perDay caps at 100).
+    // a single "need": fuel. Drains as you drive; refuel (paid) at the gas station.
+    // No free overnight refill anymore — fuel is a real cost (perDay: 0).
     needs: [
-      { id: "fuel", icon: "⛽", start: 100, perDay: 100 },
+      { id: "fuel", icon: "⛽", start: 100, perDay: 0 },
     ],
 
     // low-fuel warning bubble (replaces the mood heart entirely — cars have no mood).
@@ -145,15 +146,12 @@ window.GAME = {
       { id: "purple", name: "Violet", color: "#b06cf0", tint: "#b06cf0" },
     ],
     variantLabel: "Couleur",
-    customize: { rename: true, variant: true },
-    customizeTitle: "🎨 Atelier peinture",
-    customizedMessage: "{name} est comme neuve ! ✨",
+    // Repainting is done at the GARAGE (Pay'n'Spray) now — no paint action on the car.
 
     actions: [
       { id: "drive", type: "ride", label: "Conduire", icon: "🚗", dismountLabel: "Descendre" },
       { id: "race",  type: "race", label: "Course", icon: "🏁" },
       { id: "boost", type: "jump", label: "Saut cascade", icon: "🌟" },
-      { id: "paint", type: "customize", label: "Peinture", icon: "🎨" },
     ],
 
     ride: {
@@ -165,17 +163,17 @@ window.GAME = {
       dismountLabel: "Descendre",
       exhaustedMessage: "⛽ Panne sèche ! {name} n'a plus d'essence.",
       tooTired: "⛽ {name} est à sec — va faire le plein !",
-      jump: { distance: 210, cost: 7, minEnergy: 10, tooTired: "⛽ Pas assez d'essence pour un saut !" },
+      // stunt jumps pay a little (rewards skill) and can clear ramps
+      jump: { distance: 210, cost: 7, minEnergy: 10, reward: 8, rewardMessage: "🌟 Belle cascade ! +💵{r}", tooTired: "⛽ Pas assez d'essence pour un saut !" },
     },
 
     names: ["Comète", "Banshee", "Éclair", "Bolide", "Tornade", "Fusée", "Panthère", "Vipère", "Ouragan", "Météore"],
-    startCount: 5,
+    // You start with a couple of modest beaters — buy faster rides at the dealership.
+    startCount: 3,
     startCreatures: [
-      { name: "Comète",  variant: "red" },
-      { name: "Banshee", variant: "blue" },
-      { name: "Éclair",  variant: "yellow" },
-      { name: "Bolide",  variant: "green" },
-      { name: "Vipère",  variant: "silver" },
+      { name: "Vieux Tacot", variant: "silver", speedMul: 0.85, grip: 0.9,  drainMul: 1.15 },
+      { name: "Comète",      variant: "red",    speedMul: 0.95, grip: 1.0,  drainMul: 1.0 },
+      { name: "Banshee",     variant: "blue",   speedMul: 1.0,  grip: 1.0,  drainMul: 1.0 },
     ],
   },
 
@@ -190,10 +188,13 @@ window.GAME = {
     carSprite: "car_back",  // ta voiture vue de derrière (teintée à sa couleur)
     roadside: ["bldg_a", "bldg_b", "palm", "streetlamp"],   // décor qui défile au bord de la route
     spriteZoom: 0.05,
-    track: { segments: 1100, speed: 1.05, steer: 2.5, centrifugal: 0.7 },
+    track: { segments: 1100, speed: 1.0, steer: 2.6, centrifugal: 0.65 },
+    // Obstacles à éviter — GROS et bien espacés, aucune personne : plots + voitures lentes.
     hazards: {
-      coneSprite: "cone", pedestrianSprite: "ped_front",
-      coneEvery: 22, pedEvery: 31,   // un plot / un piéton tous les N segments
+      obstacles: [
+        { sprite: "cone",     every: 30, phase: 0,  scale: 4.2, hw: 0.30, spread: 0.6 },
+        { sprite: "car_back", every: 52, phase: 22, scale: 6.5, hw: 0.36, spread: 0.42 },
+      ],
     },
     quitLabel: "Quitter",
     startMessage: "🏁 3… 2… 1… GO ! Rejoins l'arrivée en évitant piétons et plots !",
@@ -234,12 +235,14 @@ window.GAME = {
     [1200, 1150, "ramp", 1.4, false],
   ],
 
-  /* ---- Stations: Garage (sleep→next day, free refuel), Gas (paid refuel),
-         Depot (delivery job → cash). ---- */
+  /* ---- Stations ----
+     Garage = Pay'n'Spray (repeindre = effacer l'alerte police) + dormir.
+     Station-service = plein payant. Dépôt = prendre une livraison (destination sur la
+     carte). Concession = acheter de meilleures voitures. ---- */
   stations: [
     { type: "rest", x: 1200, y: 930, sprite: "garage", scale: 1.15, label: "Garage",
       box: { dx: -84, dy: -62, w: 168, h: 54 },
-      action: "nextDay", actionLabel: "🌙 Dormir (jour suivant)" },
+      action: "garage", actionLabel: "🏚️ Garage (peinture / dormir)" },
 
     { type: "gas", x: 350, y: 860, sprite: "gas", scale: 1.1, label: "Station-service",
       box: { dx: -76, dy: -60, w: 152, h: 54 },
@@ -255,50 +258,111 @@ window.GAME = {
 
     { type: "depot", x: 2060, y: 860, sprite: "depot", scale: 1.1, label: "Dépôt",
       box: { dx: -84, dy: -66, w: 168, h: 58 },
-      action: "custom", actionLabel: "📦 Prendre une livraison (+💵35)",
-      onUse: function (state, api) {
-        var pay = 35;
-        state.coins += pay;
-        state.stats.jobs = (state.stats.jobs || 0) + 1;
-        var lines = ["📦 Livraison réussie ! +💵" + pay, "📦 Colis livré à temps ! +💵" + pay, "📦 Beau boulot, chauffeur ! +💵" + pay];
-        api.message(lines[(state.stats.jobs - 1) % lines.length]);
-        api.refreshHud(); api.save();
-      } },
+      action: "jobBoard", actionLabel: "📦 Prendre une livraison" },
+
+    { type: "dealer", x: 1200, y: 300, sprite: "shop_block", scale: 1.15, label: "Concession",
+      box: { dx: -96, dy: -50, w: 192, h: 46 },
+      action: "dealer", actionLabel: "🏪 Concession auto" },
   ],
 
-  /* ---- Economy ---- */
-  economy: { startCoins: 20, startResources: {}, startCapacity: 9, dayReward: 40 },
+  /* ---- Livraisons : le Dépôt donne une destination sur la carte (📦 + flèche).
+         Roule jusque-là pour être payé. Les cargaisons « chaudes » paient plus mais
+         font monter l'alerte police ⭐. ---- */
+  jobs: {
+    title: "📦 Bureau des livraisons",
+    subtitle: "Choisis ta course :",
+    radius: 90,
+    offers: [
+      { label: "📦 Livraison tranquille", sub: "Paie sûre, aucun risque", pay: 45 },
+      { label: "🔥 Cargaison sensible", sub: "Grosse paie… mais la police rôde ⭐⭐", pay: 120, hot: true, heat: 2 },
+    ],
+    dests: [
+      { x: 560,  y: 690,  name: "le quartier Ouest" },
+      { x: 1860, y: 690,  name: "le quartier Est" },
+      { x: 560,  y: 1360, name: "les Docks" },
+      { x: 1860, y: 1360, name: "la Zone" },
+      { x: 1200, y: 1360, name: "le Front de mer" },
+    ],
+    takenMessage: "📦 En route ! Livre à {d}. Suis la flèche.",
+    hotMessage: "🔥 Cargaison sensible ! Les flics arrivent ⭐⭐. File livrer à {d} !",
+    deliveredMessage: "✅ Livré ! +💵{p}",
+    busyMessage: "🚚 Termine d'abord ta livraison en cours !",
+  },
 
-  /* ---- Missions (objectives) ---- */
+  /* ---- Police : les jobs « chauds » font monter l'alerte ⭐. Des voitures de
+         police te prennent en chasse ; si elles te collent → arrêté (amende + colis
+         perdu). Sème-les (cours / roule vite) ou repeins ta caisse au Garage. ---- */
+  police: {
+    sprite: "police", scale: 1.3, maxStars: 3, maxUnits: 3,
+    speed: 232, catchRadius: 66, bustSeconds: 3.6,
+    loseRadius: 820, loseAfter: 7, bustFine: 50, spawnDist: 660,
+    escapedMessage: "🚔 Tu as semé la police ! 😮‍💨",
+    bustMessage: "🚔 Arrêté ! −💵{f}{j}",
+  },
+
+  /* ---- Concession : dépense ton argent en meilleures voitures (le vrai puits +
+         la progression). Vitesse ⚡, tenue 🎯, autonomie ⛽. ---- */
+  dealership: {
+    title: "🏪 Concession auto",
+    subtitle: "Une meilleure caisse = plus rapide en ville ET en course :",
+    boughtMessage: "🔑 {name} est à toi ! Va la conduire.",
+    fullMessage: "🅿️ Ton garage est plein !",
+    cars: [
+      { id: "cruiser", name: "Le Croiseur", price: 180, variant: "blue",   speedMul: 1.15, grip: 1.1,  drainMul: 0.9,  range: "+",   desc: "Rapide et sobre" },
+      { id: "gt",      name: "Néon GT",     price: 420, variant: "purple", speedMul: 1.35, grip: 1.2,  drainMul: 0.85, range: "++",  desc: "Bête de course" },
+      { id: "beast",   name: "La Bête",     price: 850, variant: "red",    speedMul: 1.55, grip: 1.35, drainMul: 0.8,  range: "+++", desc: "Reine de Neon City" },
+    ],
+  },
+
+  /* ---- Garage (Pay'n'Spray) : repeindre efface l'alerte police + change la couleur. ---- */
+  garage: {
+    title: "🏚️ Garage",
+    subtitle: "Que veux-tu faire ?",
+    paintCost: 20,
+    repaintMessage: "🎨 Repeinte en {c} — les flics perdent ta trace ! 🚔",
+    paintedMessage: "🎨 Repeinte en {c} !",
+  },
+
+  /* ---- Economy : plus d'argent gratuit en dormant — tout vient des jobs. ---- */
+  economy: { startCoins: 70, startResources: {}, startCapacity: 12, dayReward: 0 },
+
+  /* ---- Grades (progression par réputation) ---- */
   objectives: {
-    extraStats: ["ride", "jump", "jobs", "raceWin"],
+    extraStats: ["ride", "jump", "jobs", "raceWin", "earned"],
     levels: [
       { name: "Bleu", goals: [
         { id: "drive1", name: "Première virée", desc: "Monte dans une voiture", check: (s) => (s.stats.ride || 0) >= 1 },
-        { id: "stunt1", name: "Cascadeur", desc: "Réussis un saut cascade 🌟", check: (s) => (s.stats.jump || 0) >= 1 },
-        { id: "job3",   name: "Livreur", desc: "Fais 3 livraisons au Dépôt", check: (s) => (s.stats.jobs || 0) >= 3 },
-        { id: "race1",  name: "Pilote", desc: "Gagne une course 🏁", check: (s) => (s.stats.raceWin || 0) >= 1 },
+        { id: "job1",   name: "Premier colis", desc: "Réussis une livraison 📦", check: (s) => (s.stats.jobs || 0) >= 1 },
+        { id: "race1",  name: "Baptême du feu", desc: "Gagne une course 🏁", check: (s) => (s.stats.raceWin || 0) >= 1 },
+      ] },
+      { name: "Chauffeur", goals: [
+        { id: "job5",   name: "Livreur", desc: "Fais 5 livraisons", check: (s) => (s.stats.jobs || 0) >= 5 },
+        { id: "earn300", name: "Premiers billets", desc: "Gagne 💵300 en tout", check: (s) => (s.stats.earned || 0) >= 300 },
+        { id: "stunt3", name: "Cascadeur", desc: "Réussis 3 sauts cascade 🌟", check: (s) => (s.stats.jump || 0) >= 3 },
+      ] },
+      { name: "As du volant", goals: [
+        { id: "buy1",   name: "Nouvelle caisse", desc: "Achète une voiture à la Concession 🏪", check: (s) => (s.creatures || []).some((c) => c.model) },
+        { id: "race3",  name: "Pilote confirmé", desc: "Gagne 3 courses", check: (s) => (s.stats.raceWin || 0) >= 3 },
+        { id: "job12",  name: "Transporteur", desc: "Fais 12 livraisons", check: (s) => (s.stats.jobs || 0) >= 12 },
       ] },
       { name: "Caïd", goals: [
-        { id: "job8",   name: "Roi de la route", desc: "Fais 8 livraisons en tout", check: (s) => (s.stats.jobs || 0) >= 8 },
-        { id: "race3",  name: "Champion", desc: "Gagne 3 courses", check: (s) => (s.stats.raceWin || 0) >= 3 },
-        { id: "day3",   name: "Increvable", desc: "Atteins le Jour 3", check: (s) => (s.day || 1) >= 3 },
-        { id: "cash400", name: "Gros bonnet", desc: "Aie 💵400 en poche", check: (s) => (s.coins || 0) >= 400 },
+        { id: "earn1500", name: "Fortune", desc: "Gagne 💵1500 en tout", check: (s) => (s.stats.earned || 0) >= 1500 },
+        { id: "race8",  name: "Champion", desc: "Gagne 8 courses", check: (s) => (s.stats.raceWin || 0) >= 8 },
+        { id: "beast",  name: "Roi de Neon City", desc: "Possède « La Bête » 🏎️", check: (s) => (s.creatures || []).some((c) => c.model === "beast") },
       ] },
     ],
   },
 
   /* ---- Help ---- */
   help: [
-    "<b>Bienvenue à Neon City !</b> Une petite ville en vue de dessus où tu roules, livres et cascades. 🚗",
-    "<b>🚶 Se déplacer :</b> touche l'endroit où aller (ton perso s'y rend). Double-tape pour courir. (Clavier : flèches ou ZQSD/WASD.)",
-    "<b>🚗 Conduire :</b> approche une voiture et appuie sur « Conduire ». On roule plus vite en voiture ! ⛽ L'essence baisse en roulant.",
-    "<b>🏁 Course :</b> au volant, appuie sur « Course » : la vue passe <b>derrière la voiture</b> (comme un vrai jeu de course !). Tourne avec ◀ ▶ (ou la moitié gauche/droite de l'écran) pour rester sur la route et éviter les 🚶 piétons et 🚧 plots — chaque choc coûte du temps — puis rejoins l'arrivée avant la fin du chrono !",
-    "<b>🌟 Saut cascade :</b> au volant, appuie sur « Saut cascade » pour bondir — vise une rampe pour le style !",
-    "<b>⛽ Essence :</b> quand une voiture est presque à sec, une bulle ⛽ apparaît. Va à la <b>Station-service</b> pour faire le plein (ou dors au Garage).",
-    "<b>📦 Dépôt :</b> prends des livraisons pour gagner de l'💵argent.",
-    "<b>🎨 Peinture :</b> sélectionne une voiture puis « Peinture » pour la renommer ou changer sa couleur.",
-    "<b>🌙 Garage :</b> dors pour passer au jour suivant — tes voitures refont le plein et tu touches ta paie.",
-    "<b>🎯 Missions :</b> ouvre le menu 🎯 pour voir tes objectifs. 💾 La partie se sauvegarde toute seule.",
+    "<b>Bienvenue à Neon City !</b> Deviens le meilleur chauffeur : roule, livre, cours… et gère la police. 🚗",
+    "<b>🚶 Se déplacer :</b> touche où aller (double-tape pour courir). Clavier : flèches ou ZQSD/WASD. <b>🚗 Conduire :</b> approche une voiture → « Conduire ». On roule bien plus vite en voiture.",
+    "<b>📦 Livraisons (Dépôt) :</b> prends une course ; une destination 📦 apparaît sur la carte avec une flèche. Roule jusque-là pour être payé.",
+    "<b>🔥 Cargaisons sensibles :</b> elles paient gros mais font monter l'alerte police ⭐⭐.",
+    "<b>🚔 Police :</b> avec des étoiles ⭐, des voitures de police te chassent. Si elles te collent → arrêté (amende + colis perdu). <b>Sème-les</b> en roulant vite… ou fonce au <b>Garage repeindre</b> ta caisse (l'alerte retombe à zéro !).",
+    "<b>🏁 Course :</b> au volant → « Course » : vue <b>derrière la voiture</b>. Tourne (◀ ▶ ou moitié gauche/droite de l'écran), évite les plots et voitures, rejoins l'arrivée avant le chrono. Une meilleure caisse va plus vite !",
+    "<b>🏪 Concession :</b> dépense ton argent en voitures plus rapides (⚡ vitesse, 🎯 tenue, ⛽ autonomie) — c'est ta progression.",
+    "<b>⛽ Essence :</b> ça baisse en roulant. Fais le plein (payant) à la <b>Station-service</b>. <b>🌟 Cascade :</b> au volant, saute sur une rampe pour un petit bonus.",
+    "<b>🎯 Grades :</b> ouvre 🎯 pour voir ta montée (Bleu → Chauffeur → As du volant → Caïd). 💾 Sauvegarde automatique.",
   ],
 };

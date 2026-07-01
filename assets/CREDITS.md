@@ -5,23 +5,24 @@ The current game, **GTA 7 · Neon City**, is a top-down neon-city driving game.
 repo — nothing is reused from any other game's art. They are dedicated to the public
 domain (**CC0**).
 
-Generation scripts: `tools/gen_chars.py` (character walkcycles),
+Generation scripts: `tools/gen_chars.py` (man + woman walkcycles),
 `tools/gen_world.py` (city, cars, buildings, props, icons), `tools/gen_race.py`
-(traffic cone) and `tools/gen_race3d.py` (behind-the-car racing billboards).
+(traffic cone), `tools/gen_race3d.py` (behind-the-car racing billboards) and
+`tools/gen_police.py` (police cruiser).
 
 | Asset | File | Notes |
 | --- | --- | --- |
-| Street characters (2) | `assets/sheet/player_vice.png`, `player_cyan.png` | 64×64 LPC walkcycle |
-| Character thumbnails | `assets/ui/vice_thumb.png`, `cyan_thumb.png` | menu portraits |
+| Playable characters | `assets/sheet/player_man.png`, `player_woman.png` | 64×64 LPC walkcycle (man + woman) |
+| Character thumbnails | `assets/ui/man_thumb.png`, `woman_thumb.png` | menu portraits |
 | Car | `assets/sheet/car.png` | 64×64 top-down car; recoloured per paint variant via tint |
+| Police cruiser | `assets/img/police.png` | top-down chase car (wanted level) |
 | Road / sidewalk / crosswalk / park | `assets/img/asphalt.png`, `sidewalk.png`, `crosswalk.png`, `grass.png` | tileable |
 | Neon buildings | `assets/img/tower_cyan.png`, `tower_pink.png`, `shop_block.png` | top-down, baked soft shadow |
 | Stations | `assets/img/garage.png`, `gas.png`, `depot.png` | sleep / refuel / delivery job |
 | Street props | `assets/img/palm.png`, `streetlamp.png`, `hydrant.png`, `ramp.png` | scenery; ramp = stunt |
 | Low-fuel bubble | `assets/img/want_gas.png` | "needs gas" indicator over a car |
 | Traffic cone | `assets/img/cone.png` | hazard billboard on the road during races |
-| Race car (rear) | `assets/img/car_back.png` | the player's car seen from behind (tinted to its paint) |
-| Race pedestrian | `assets/img/ped_front.png` | front-facing pedestrian hazard billboard |
+| Race car (rear) | `assets/img/car_back.png` | the player's car from behind (also the traffic obstacle) |
 | Roadside buildings | `assets/img/bldg_a.png`, `bldg_b.png` | neon building billboards lining the race road |
 | App icons | `assets/favicon.png`, `assets/apple-touch-icon.png` | generated |
 

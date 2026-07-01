@@ -40,6 +40,27 @@ body {
 .hidden { display: none !important; }
 #night-veil { position: fixed; inset: 0; background: #02030c; opacity: 0; pointer-events: none; z-index: 40; }
 
+/* Wanted level (stars) — top-centre banner while the police are after you. */
+.heat-hud {
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 108px); left: 50%; transform: translateX(-50%);
+  z-index: 46; pointer-events: none;
+}
+.heat-hud .wanted {
+  background: rgba(30, 10, 16, 0.86); border: 2px solid var(--bad); color: #ffe1e7;
+  padding: 5px 14px; border-radius: 14px; font-weight: bold; font-size: 1.05rem; letter-spacing: 2px;
+  box-shadow: 0 0 18px rgba(255, 90, 120, 0.5); animation: rh-pulse 0.9s ease-in-out infinite;
+}
+@keyframes rh-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+
+/* Choice menus (depot / dealership / garage) — a vertical list of big buttons. */
+.choice-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.choice-btn { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; width: 100%; }
+.choice-btn .ch-txt { display: flex; flex-direction: column; line-height: 1.15; }
+.choice-btn .ch-txt small { font-weight: normal; opacity: 0.8; font-size: 0.8rem; margin-top: 2px; }
+.choice-btn .ch-price { flex: 0 0 auto; font-weight: bold; color: var(--accent); white-space: nowrap; }
+.choice-btn.accent { border-color: var(--neon2); box-shadow: 0 0 14px rgba(255,77,151,0.3); }
+.choice-btn:disabled { opacity: 0.55; }
+
 /* Pseudo-3D race view — full-screen canvas over the top-down world. */
 .race3d {
   position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh;
