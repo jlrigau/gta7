@@ -23,9 +23,10 @@ of the fields below — every system is optional, so start small and add as you 
 - **Environment**: fenced **arena** with obstacles + a **trail loop** of sand paths in
   a forest band, scattered by a single declarative rule (no bare edges/corners).
 - **Day/night** cycle with rest-gating; **objectives/levels** gamification.
-- **Race mini-mode**: while mounted, a timed run through **checkpoints** with a
-  **camera zoom-in**, a guide arrow, and **hazards to avoid** (wandering pedestrians +
-  static obstacles) that cost time on contact. Reward + `raceWin` stat on finish.
+- **Race mode (pseudo-3D)**: while mounted, the top-down world is replaced by a
+  **behind-the-car arcade racing view** (receding road, neon horizon, roadside billboards)
+  rendered on its own canvas. Steer to reach the finish before the timer, dodging
+  **hazards** (pedestrians + cones) that cost time on contact. Reward + `raceWin` stat.
 - **Save** to localStorage with backward-compatible loading; **PWA/iOS** support.
 
 ## Top-level shape
@@ -261,35 +262,36 @@ path: { width, sand, inset, tile, label, labelY,
 ```
 See the **place-scatter** skill for the single-rule vegetation system.
 
-### `race` (optional — timed checkpoint race while mounted)
+### `race` (optional — pseudo-3D behind-the-car racing view)
 Requires a mount (`creature.ride`) and a creature **action of `type:"race"`** (shown while
-mounted, next to jump/dismount — tapping it toggles start/quit). When started, the camera
-**zooms in** (`zoom`), a **timer** counts down, a guide **arrow** floats above the vehicle
-pointing at the current checkpoint, and **hazards** appear on the road. Drive through each
-checkpoint ring in order before time runs out. Hitting a hazard costs `hitPenalty` seconds
-(screen shake + red flash). Finishing all checkpoints awards `reward` coins and increments
-the `raceWin` stat (declare it in `objectives.extraStats` to use it in a goal). Leaving the
-vehicle or running out of gas ends the race. Checkpoint rings are drawn by the engine (no
-art); hazards use config sprites.
+mounted, next to jump/dismount — tapping it starts the race, tapping again quits). Starting
+hides the top-down world behind a **full-screen pseudo-3D racing view**: the road recedes to
+a **neon horizon**, your vehicle (`carSprite`, auto-tinted to its paint variant) sits at the
+bottom, roadside billboards scroll past, and a **timer** counts down. Steer with **◀ ▶ /
+A-D / Q-D** or by touching the **left/right half of the screen** to stay on the road and
+dodge **hazards** (pedestrians + cones) — each hit costs `hitPenalty` seconds (shake + red
+flash). Reach the **finish line** before time runs out to win `reward` coins and increment
+the `raceWin` stat (declare it in `objectives.extraStats` for a goal). Runs on its own
+`requestAnimationFrame` loop; leaving the car / a world rebuild ends it. Everything is
+drawn on a canvas — only the billboard **sprites** come from assets.
 ```
 race: {
-  time: 50,                 // seconds on the clock
-  zoom: 1.05,               // camera zoom during the race (higher = closer)
-  reward: 90,               // coins awarded on finish
-  hitPenalty: 3,            // seconds lost per hazard contact
-  checkpointRadius: 80,     // ring radius / how close counts as "reached"
-  checkpoints: [ {x,y}, ... ],          // driven through IN ORDER; last one shows 🏁
+  time: 70,                 // seconds to reach the finish
+  reward: 110,              // coins awarded on finish
+  hitPenalty: 3,            // seconds lost per hazard hit
+  carSprite: "car_back",    // the player's car seen from behind (tinted to its variant)
+  roadside: ["bldg_a", "palm", ...],   // billboard keys scattered along the roadside
+  spriteZoom: 0.05,         // global billboard size factor
+  track: { segments: 1100, speed: 1.0, steer: 2.4, centrifugal: 0.7 },
   hazards: {
-    coneSprite: "<img key>", coneScale, coneRadius,   // static obstacles…
-    cones: [ {x,y}, ... ],                             // …at fixed spots
-    pedestrianSheet: "<4-frame side-walk sheet>",      // moving hazards that wander
-    pedestrianScale, pedestrianCount, pedestrianRadius, pedestrianSpeed,
+    coneSprite: "cone", pedestrianSprite: "ped_front",   // billboard sprites to dodge
+    coneEvery: 22, pedEvery: 31,                          // one every N road segments
   },
-  quitLabel, startMessage, checkpointMessage, hitMessage, winMessage, loseMessage,
+  quitLabel, startMessage, hitMessage, winMessage, loseMessage, quitMessage,
 }
 ```
-Messages interpolate `{n}` (current checkpoint / penalty), `{t}` (total checkpoints) and
-`{r}` (reward). Omit the whole `race` block to disable the mode.
+Messages interpolate `{n}` (penalty seconds) and `{r}` (reward). Omit the whole `race`
+block to disable the mode. Needs the generic `.race3d` canvas style in `style.css`.
 
 ### `objectives` / `help`
 ```

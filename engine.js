@@ -511,11 +511,6 @@ function buildAnims() {
       });
     });
   }
-  // Race pedestrian walk (side-walk sheet), if a race with pedestrians is configured.
-  const ped = RACE && RACE.hazards && RACE.hazards.pedestrianSheet;
-  if (ped && !sc.anims.exists("race-ped-walk")) {
-    sc.anims.create({ key: "race-ped-walk", frames: sc.anims.generateFrameNumbers(ped, { start: 0, end: 3 }), frameRate: 6, repeat: -1 });
-  }
 }
 
 /* ===================== Fences & zones ===================== */
@@ -706,7 +701,7 @@ function buildWorld() {
   decorObjs = [];
   COLLISIONS = [];
   placingDecor = null; ghostDecor = null; jumpRunning = false;
-  if (race) { raceHudHide(); race = null; }   // a world rebuild invalidates race objects
+  if (race) r3Teardown();                     // a world rebuild ends any active race
 
   // Ground: tiled, extending beyond the world so no gaps show at the edges.
   const ground = (G.world && G.world.groundTile) || "grass";
@@ -869,7 +864,7 @@ function animatePlayer(mvx, mvy) {
 function sceneUpdate(time, delta) {
   if (!player) return;
   const dt = Math.min(delta / 1000, 0.05);
-  const modalOpen = !$("modal").classList.contains("hidden") || nightRunning || closeupOpen;
+  const modalOpen = !$("modal").classList.contains("hidden") || nightRunning || closeupOpen || !!race;
 
   let vx = 0, vy = 0;
   if (!modalOpen) {
@@ -938,8 +933,6 @@ function sceneUpdate(time, delta) {
     if (playerSprite.y !== 0) { playerSprite.y = 0; playerShadow.setVisible(true); }
     if (playerName && playerName.y !== PLAYER_NAME_Y) playerName.y = PLAYER_NAME_Y;
   }
-
-  if (race) raceTick(dt, time);
 
   // Trail-visit stat (marked once when the player steps onto the path).
   if (state.stats && PATHS.length && !state.stats.trailVisit && player && onPath(player.x, player.y, 0)) {
@@ -1202,7 +1195,7 @@ function creatureAction(actionId) {
 
   if (a.type === "ride") { toggleRide(c); return; }
   if (a.type === "jump") { doJump(); return; }
-  if (a.type === "race") { if (race) endRace(false); else startRace(); return; }
+  if (a.type === "race") { if (race) r3End(false, true); else startRace(); return; }
   if (a.type === "customize") { openCustomize(c); return; }
   if (a.type === "closeup") { openCloseup(c, a); return; }
 
@@ -1842,150 +1835,304 @@ function openHelp() {
   openModal(META.helpTitle || "❓ How to play", `<div class="help-text">${items}</div>`);
 }
 
-/* ===================== Race mini-mode (config-gated: GAME.race) =====================
-   A timed race while mounted: drive through a sequence of checkpoints before the timer
-   runs out, avoiding hazards (wandering pedestrians + static obstacles on the road).
-   The camera zooms in for a racing view and a guide arrow points at the next checkpoint.
-   Fully generic — checkpoints, timer, zoom, reward and hazards all come from GAME.race. */
+/* ===================== Race mode — pseudo-3D behind-the-car view (config-gated: GAME.race)
+   When the mounted "race" action fires, the top-down world is hidden behind a full-screen
+   canvas showing a classic pseudo-3D racer: the road recedes to a neon horizon, your car
+   sits at the bottom (painted in its current colour), and you steer to reach the finish
+   before the timer runs out while dodging pedestrians and cones. Runs on its own
+   requestAnimationFrame loop. Track feel, sprites, hazards, timer and reward come from
+   GAME.race — engine.js stays generic (see ENGINE.md). */
+
+const R3 = {
+  on: false, canvas: null, ctx: null, W: 0, H: 0, dpr: 1,
+  segLen: 200, roadW: 1100, camH: 1100, camD: 0.84, draw: 240,
+  segs: [], finishZ: 0, pos: 0, prevPos: 0, playerX: 0, speed: 0, maxSpeed: 0,
+  time: 0, over: false, raf: 0, last: 0, shake: 0, hitFlash: 0,
+  input: { left: false, right: false }, img: {}, carCanvas: null, listeners: [],
+};
+
+// small deterministic PRNG so the track is identical every run (no Date.now/Math.random needed)
+function r3Rng(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 function startRace() {
   if (!RACE || race || !mounted || !sc) return;
-  const cps = (RACE.checkpoints || []).map((p) => ({ x: p.x, y: p.y, r: RACE.checkpointRadius || 70 }));
-  if (!cps.length) return;
-  race = { idx: 0, cps, time: RACE.time || 45, hazards: [], objs: [], hitAt: -9, baseZoom: sc.cameras.main.zoom };
+  race = { mode: "3d" };            // truthy marker: freezes the top-down world + panel toggle
+  r3Open();
+}
 
-  cps.forEach((cp, i) => {
-    cp.g = sc.add.graphics().setDepth(1);
-    cp.flag = sc.add.text(cp.x, cp.y - cp.r - 10, i === cps.length - 1 ? "🏁" : String(i + 1),
-      { fontSize: "26px", fontFamily: "sans-serif", color: "#fff8ec", fontStyle: "bold", stroke: "#1a1330", strokeThickness: 5 }).setOrigin(0.5).setDepth(99991);
-    race.objs.push(cp.g, cp.flag);
-    drawCheckpoint(cp, i === 0);
-  });
+function r3Img(key) {
+  if (!key || !sc || !sc.textures.exists(key)) return null;
+  return sc.textures.get(key).getSourceImage() || null;
+}
 
-  spawnHazards();
+function r3TintCar(baseImg, tintHex) {
+  const c = document.createElement("canvas"); c.width = baseImg.width; c.height = baseImg.height;
+  const x = c.getContext("2d");
+  x.drawImage(baseImg, 0, 0);
+  x.globalCompositeOperation = "multiply"; x.fillStyle = tintHex; x.fillRect(0, 0, c.width, c.height);
+  x.globalCompositeOperation = "destination-in"; x.drawImage(baseImg, 0, 0);   // keep car pixels only
+  return c;
+}
 
-  const arrow = sc.add.triangle(0, 0, 0, -16, 13, 12, -13, 12, 0xffd54a).setDepth(99992);
-  arrow.setStrokeStyle(3, 0x1a1330, 1);
-  race.arrow = arrow; race.objs.push(arrow);
+function r3Open() {
+  const H = RACE.hazards || {};
+  let cv = $("race3d");
+  if (!cv) { cv = document.createElement("canvas"); cv.id = "race3d"; cv.className = "race3d"; document.body.appendChild(cv); }
+  R3.canvas = cv; R3.ctx = cv.getContext("2d");
+  r3Resize(); window.addEventListener("resize", r3Resize);
 
-  sc.tweens.add({ targets: sc.cameras.main, zoom: RACE.zoom || 1.1, duration: 500, ease: "Quad.easeOut" });
-  raceHudShow();
-  message(RACE.startMessage || "🏁 Race! Reach checkpoint 1!");
+  R3.img = {
+    ped: r3Img(H.pedestrianSprite || "ped_front"),
+    cone: r3Img(H.coneSprite || "cone"),
+    car: r3Img(RACE.carSprite || "car_back"),
+    roadside: (RACE.roadside || []).map((k) => r3Img(k)).filter(Boolean),
+  };
+  const vt = (typeof variantDef === "function" && variantDef(variantId(mounted))) || {};
+  R3.carCanvas = R3.img.car ? r3TintCar(R3.img.car, vt.tint || vt.color || "#dcdce4") : null;
+
+  r3BuildTrack();
+  const T = RACE.track || {};
+  R3.pos = 0; R3.prevPos = 0; R3.playerX = 0; R3.speed = 0;
+  R3.maxSpeed = R3.segLen * 60 * (T.speed || 1.0);
+  R3.time = RACE.time || 60; R3.over = false; R3.shake = 0; R3.hitFlash = 0;
+
+  R3.input = { left: false, right: false };
+  const kd = (e) => r3Key(e, true), ku = (e) => r3Key(e, false);
+  const setPtr = (e) => { const r = cv.getBoundingClientRect(); const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left; R3.input.left = cx < r.width * 0.5; R3.input.right = cx >= r.width * 0.5; };
+  const pd = (e) => { setPtr(e); }, pm = (e) => { if (R3.input.left || R3.input.right) setPtr(e); }, pu = () => { R3.input.left = R3.input.right = false; };
+  window.addEventListener("keydown", kd); window.addEventListener("keyup", ku);
+  cv.addEventListener("pointerdown", pd); cv.addEventListener("pointermove", pm);
+  cv.addEventListener("pointerup", pu); cv.addEventListener("pointercancel", pu);
+  R3.listeners = [["keydown", kd, window], ["keyup", ku, window], ["pointerdown", pd, cv], ["pointermove", pm, cv], ["pointerup", pu, cv], ["pointercancel", pu, cv]];
+
+  cv.classList.remove("hidden");
+  message(RACE.startMessage || "🏁 C'est parti !");
+  R3.on = true; R3.last = 0; R3.raf = requestAnimationFrame(r3Loop);
   panelId = PANEL_DIRTY; refreshInteraction();
 }
 
-function drawCheckpoint(cp, active) {
-  const g = cp.g; if (!g) return;
-  g.clear();
-  const col = active ? 0x3fe0a0 : 0x6a6f92, a = active ? 0.9 : 0.4;
-  g.lineStyle(active ? 7 : 4, col, a); g.strokeCircle(cp.x, cp.y, cp.r);
-  g.fillStyle(col, active ? 0.16 : 0.07); g.fillCircle(cp.x, cp.y, cp.r);
-  if (cp.flag) cp.flag.setAlpha(active ? 1 : 0.5);
+function r3Key(e, down) {
+  const k = e.key;
+  if (k === "ArrowLeft" || k === "a" || k === "A" || k === "q" || k === "Q") { R3.input.left = down; e.preventDefault(); }
+  else if (k === "ArrowRight" || k === "d" || k === "D") { R3.input.right = down; e.preventDefault(); }
+  else if (down && k === "Escape") r3End(false, true);
 }
 
-function spawnHazards() {
-  const H = RACE.hazards || {};
-  (H.cones || []).forEach((p) => {
-    const spr = H.coneSprite
-      ? sc.add.image(p.x, p.y, H.coneSprite).setOrigin(0.5, 0.9).setScale(H.coneScale || 1).setDepth(p.y)
-      : sc.add.circle(p.x, p.y, 14, 0xf5822c).setDepth(p.y);
-    race.hazards.push({ x: p.x, y: p.y, obj: spr, r: H.coneRadius || 26, kind: "cone" });
-    race.objs.push(spr);
-  });
-  const n = H.pedestrianCount || 0;
-  const z = HOME_ZONE ? HOME_ZONE.rect : { x: 60, y: 60, w: WORLD.w - 120, h: WORLD.h - 120 };
-  for (let i = 0; i < n; i++) {
-    const x = randInt(z.x + 60, z.x + z.w - 60), y = randInt(z.y + 60, z.y + z.h - 60);
-    let spr;
-    if (H.pedestrianSheet) {
-      spr = sc.add.sprite(x, y, H.pedestrianSheet).setScale(H.pedestrianScale || 1.3).setDepth(y);
-      if (sc.anims.exists("race-ped-walk")) spr.play("race-ped-walk");
-    } else spr = sc.add.circle(x, y, 12, 0x4a96f0).setDepth(y);
-    const ang = Math.random() * Math.PI * 2;
-    race.hazards.push({ x, y, obj: spr, r: H.pedestrianRadius || 34, kind: "ped",
-      vx: Math.cos(ang), vy: Math.sin(ang), next: 0, speed: H.pedestrianSpeed || 55 });
-    race.objs.push(spr);
+function r3Resize() {
+  const cv = R3.canvas; if (!cv) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  R3.dpr = dpr; R3.W = cv.clientWidth || window.innerWidth; R3.H = cv.clientHeight || window.innerHeight;
+  cv.width = Math.floor(R3.W * dpr); cv.height = Math.floor(R3.H * dpr);
+  R3.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function r3BuildTrack() {
+  const T = RACE.track || {}, H = RACE.hazards || {};
+  const N = T.segments || 900, rnd = r3Rng(1234567);
+  R3.segs = []; let curve = 0;
+  for (let i = 0; i < N; i++) {
+    if (i % 55 === 0) curve = (i > 40 && rnd() < 0.7) ? (rnd() < 0.5 ? -1 : 1) * (0.6 + rnd() * 2.4) : 0;
+    const light = Math.floor(i / 3) % 2 === 0;
+    R3.segs.push({
+      i, z: i * R3.segLen, curve: curve * 0.5,
+      road: light ? "#3b404c" : "#33373f", grass: light ? "#243d2b" : "#203524",
+      rumble: light ? "#eef2f7" : "#c8405d", lane: light, sprites: [], obstacles: [],
+    });
+  }
+  const road = R3.img.roadside;
+  if (road.length) for (let i = 18; i < N - 6; i += 7) {
+    const side = rnd() < 0.5 ? -1 : 1;
+    R3.segs[i].sprites.push({ img: road[Math.floor(rnd() * road.length)], offset: side * (1.4 + rnd() * 1.7), scale: 3.4 });
+  }
+  const conesEvery = H.coneEvery || 24, pedsEvery = H.pedEvery || 33;
+  for (let i = 45; i < N - 18; i++) {
+    if (R3.img.cone && i % conesEvery === 0) R3.segs[i].obstacles.push({ img: R3.img.cone, offset: rnd() * 1.3 - 0.65, scale: 1.7, hw: 0.26 });
+    if (R3.img.ped && i % pedsEvery === 15) R3.segs[i].obstacles.push({ img: R3.img.ped, offset: rnd() * 1.3 - 0.65, scale: 2.4, hw: 0.22, sway: rnd() * 6.28 });
+  }
+  R3.finishZ = (N - 12) * R3.segLen;
+  for (let i = N - 14; i < N - 10; i++) R3.segs[i].finish = true;
+}
+
+function r3Loop(ts) {
+  if (!R3.on) return;
+  if (!R3.last) R3.last = ts;
+  const dt = Math.min((ts - R3.last) / 1000, 0.05); R3.last = ts;
+  r3Update(dt); r3Render();
+  if (R3.on) R3.raf = requestAnimationFrame(r3Loop);
+}
+
+function r3Update(dt) {
+  if (R3.over) return;
+  const T = RACE.track || {};
+  R3.time -= dt; R3.prevPos = R3.pos;
+  R3.speed += (R3.maxSpeed - R3.speed) * Math.min(1, dt * 0.8);
+  if (Math.abs(R3.playerX) > 1) R3.speed *= (1 - dt * 1.1);          // off-road drag
+  R3.pos += R3.speed * dt;
+
+  const steer = dt * (T.steer || 2.4) * (0.35 + R3.speed / R3.maxSpeed);
+  if (R3.input.left) R3.playerX -= steer;
+  if (R3.input.right) R3.playerX += steer;
+  const seg = R3.segs[Math.floor(R3.pos / R3.segLen)] || R3.segs[0];
+  R3.playerX -= dt * (R3.speed / R3.maxSpeed) * (seg.curve || 0) * (T.centrifugal || 0.7);
+  R3.playerX = clamp(R3.playerX, -2.2, 2.2);
+
+  const a = R3.prevPos, b = R3.pos;
+  for (let i = 0; i < R3.segs.length; i++) {
+    const s = R3.segs[i]; if (!s.obstacles.length || s.z <= a || s.z > b) continue;
+    s.obstacles.forEach((o) => {
+      if (o.dead) return;
+      if (Math.abs(R3.playerX - o.offset) < o.hw + 0.22) {
+        o.dead = true; R3.speed *= 0.32; R3.time -= (RACE.hitPenalty || 3); R3.shake = 0.4; R3.hitFlash = 0.5;
+        message((RACE.hitMessage || "🚧 Aïe ! −{n}s").replace("{n}", RACE.hitPenalty || 3));
+      }
+    });
+  }
+  if (R3.shake > 0) R3.shake = Math.max(0, R3.shake - dt);
+  if (R3.hitFlash > 0) R3.hitFlash = Math.max(0, R3.hitFlash - dt * 1.6);
+
+  if (R3.pos >= R3.finishZ) { R3.over = true; r3End(true); }
+  else if (R3.time <= 0) { R3.time = 0; R3.over = true; r3End(false); }
+}
+
+function r3Project(p, camX) {
+  const cz = p.z - R3.pos; const sc = R3.camD / Math.max(cz, 1);
+  p.sc = sc; p.sx = R3.W / 2 - sc * camX * R3.W / 2;
+  p.sy = R3.H / 2 - sc * (-R3.camH) * R3.H / 2; p.sw = sc * R3.roadW * R3.W / 2;
+}
+
+function r3Render() {
+  const ctx = R3.ctx, W = R3.W, H = R3.H;
+  const shakeX = R3.shake > 0 ? (Math.random() - 0.5) * 18 * R3.shake : 0;
+  ctx.save(); ctx.translate(shakeX, 0);
+  r3Sky();
+  ctx.fillStyle = "#203524"; ctx.fillRect(0, H * 0.5, W, H * 0.5);   // ground base (no gaps)
+
+  const base = Math.floor(R3.pos / R3.segLen);
+  const drawn = []; let x = 0, dx = 0, maxy = H;
+  for (let n = 0; n < R3.draw; n++) {
+    const idx = base + n; if (idx >= R3.segs.length) break;
+    const seg = R3.segs[idx];
+    const camX = R3.playerX * R3.roadW - x;
+    const p1 = { z: seg.z }, p2 = { z: seg.z + R3.segLen };
+    r3Project(p1, camX); r3Project(p2, camX - dx);
+    x += dx; dx += seg.curve;
+    seg._p1 = p1; seg._clip = maxy;
+    if (p1.z - R3.pos < R3.camD || p2.sy >= maxy) continue;
+    r3Segment(seg, p1, p2); maxy = p2.sy; drawn.push(seg);
+  }
+  for (let n = drawn.length - 1; n >= 0; n--) {
+    const seg = drawn[n];
+    seg.sprites.forEach((sp) => r3Billboard(seg, sp));
+    seg.obstacles.forEach((o) => { if (!o.dead) r3Billboard(seg, o); });
+  }
+  r3Car();
+  ctx.restore();
+  if (R3.hitFlash > 0) { ctx.fillStyle = "rgba(255,60,60," + (R3.hitFlash * 0.4).toFixed(3) + ")"; ctx.fillRect(0, 0, W, H); }
+  r3Hud();
+}
+
+function r3Sky() {
+  const ctx = R3.ctx, W = R3.W, H = R3.H, hz = H * 0.5;
+  const g = ctx.createLinearGradient(0, 0, 0, hz);
+  g.addColorStop(0, "#241a4d"); g.addColorStop(0.55, "#5b2a6e"); g.addColorStop(1, "#e0566e");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, hz);
+  const cx = W / 2 - R3.playerX * 46, cy = hz * 0.82, r = Math.min(W, H) * 0.15;
+  const sg = ctx.createLinearGradient(0, cy - r, 0, cy + r);
+  sg.addColorStop(0, "#ffd36a"); sg.addColorStop(1, "#ff5d7a");
+  ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#3a1f52"; for (let i = 0; i < 5; i++) ctx.fillRect(cx - r, cy - r * 0.15 + i * 7, r * 2, 3);
+  ctx.fillStyle = "#2a1c4a"; const bx = -((R3.playerX * 60) % 90);
+  for (let i = -1; i < W / 90 + 1; i++) { const bh = 22 + ((i * 53 + 7) % 6) * 9; ctx.fillRect(bx + i * 90, hz - bh, 66, bh); }
+}
+
+function r3Trap(x1, y1, w1, x2, y2, w2, col) {
+  const ctx = R3.ctx; ctx.fillStyle = col; ctx.beginPath();
+  ctx.moveTo(x1 - w1, y1); ctx.lineTo(x1 + w1, y1); ctx.lineTo(x2 + w2, y2); ctx.lineTo(x2 - w2, y2); ctx.closePath(); ctx.fill();
+}
+
+function r3Segment(seg, p1, p2) {
+  const ctx = R3.ctx, W = R3.W;
+  ctx.fillStyle = seg.grass; ctx.fillRect(0, p2.sy, W, p1.sy - p2.sy + 1);
+  r3Trap(p1.sx, p1.sy, p1.sw * 1.15, p2.sx, p2.sy, p2.sw * 1.15, seg.rumble);
+  if (seg.finish) {
+    const cols = 10;
+    for (let c = 0; c < cols; c++) { const t = (c + 0.5) / cols - 0.5; r3Trap(p1.sx + t * p1.sw * 2, p1.sy, p1.sw / cols, p2.sx + t * p2.sw * 2, p2.sy, p2.sw / cols, ((c + seg.i) % 2) ? "#1a1330" : "#e9edf2"); }
+  } else {
+    r3Trap(p1.sx, p1.sy, p1.sw, p2.sx, p2.sy, p2.sw, seg.road);
+    if (seg.lane) r3Trap(p1.sx, p1.sy, p1.sw * 0.03, p2.sx, p2.sy, p2.sw * 0.03, "#e7ecf2");
   }
 }
 
-function raceTick(dt, now) {
-  if (!race) return;
-  if (!mounted) { endRace(false, true); return; }
-
-  race.time -= dt;
-  const z = HOME_ZONE ? HOME_ZONE.rect : { x: 40, y: 40, w: WORLD.w - 80, h: WORLD.h - 80 };
-  race.hazards.forEach((h) => {
-    if (h.kind === "ped") {
-      if (now > h.next) { const a = Math.random() * Math.PI * 2; h.vx = Math.cos(a); h.vy = Math.sin(a); h.next = now + randInt(1200, 3200); }
-      h.x += h.vx * h.speed * dt; h.y += h.vy * h.speed * dt;
-      if (h.x < z.x + 30 || h.x > z.x + z.w - 30) { h.vx *= -1; h.x = clamp(h.x, z.x + 30, z.x + z.w - 30); }
-      if (h.y < z.y + 30 || h.y > z.y + z.h - 30) { h.vy *= -1; h.y = clamp(h.y, z.y + 30, z.y + z.h - 30); }
-      h.obj.x = h.x; h.obj.y = h.y; h.obj.setDepth(h.y);
-      if (h.obj.setFlipX) h.obj.setFlipX(h.vx > 0);
-    }
-    if (now - race.hitAt > 0.9 && Math.hypot(h.x - player.x, h.y - player.y) < h.r) {
-      race.hitAt = now;
-      race.time -= (RACE.hitPenalty || 3);
-      sc.cameras.main.shake(180, 0.012);
-      sc.cameras.main.flash(160, 200, 60, 60);
-      const dx = h.x - player.x, dy = h.y - player.y, d = Math.hypot(dx, dy) || 1;
-      h.x += (dx / d) * 40; h.y += (dy / d) * 40;
-      message((RACE.hitMessage || "🚧 Watch out! -{n}s").replace("{n}", RACE.hitPenalty || 3));
-    }
-  });
-
-  const cp = race.cps[race.idx];
-  if (race.arrow && cp) {
-    const ang = Math.atan2(cp.y - player.y, cp.x - player.x);
-    race.arrow.x = player.x + Math.cos(ang) * 64;
-    race.arrow.y = player.y - 74 + Math.sin(ang) * 40;
-    race.arrow.rotation = ang + Math.PI / 2;
-  }
-
-  if (cp && Math.hypot(cp.x - player.x, cp.y - player.y) < cp.r) {
-    if (cp.g) cp.g.clear(); if (cp.flag) cp.flag.setVisible(false);
-    race.idx++;
-    if (race.idx >= race.cps.length) { endRace(true); return; }
-    sc.cameras.main.flash(120, 80, 240, 160);
-    drawCheckpoint(race.cps[race.idx], true);
-    message((RACE.checkpointMessage || "✅ Checkpoint {n}/{t}!").replace("{n}", race.idx).replace("{t}", race.cps.length));
-  }
-
-  raceHudUpdate();
-  if (race.time <= 0) endRace(false);
+function r3Billboard(seg, sp) {
+  const p = seg._p1; if (!p || p.sc <= 0 || !sp.img) return;
+  const ctx = R3.ctx;
+  const w = p.sw * (sp.scale || 1) * (RACE.spriteZoom || 0.045);
+  const h = w * (sp.img.height / sp.img.width);
+  if (w < 1 || h < 1 || w > R3.W * 4) return;
+  const sway = sp.sway ? Math.sin(R3.pos * 0.012 + sp.sway) * 5 : 0;
+  const dx = p.sx + sp.offset * p.sw + sway, dy = p.sy - h;
+  ctx.save();
+  if (seg._clip != null) { ctx.beginPath(); ctx.rect(0, 0, R3.W, seg._clip); ctx.clip(); }
+  ctx.drawImage(sp.img, dx - w / 2, dy, w, h);
+  ctx.restore();
 }
 
-function endRace(win, silent) {
-  if (!race) return;
-  const r = race; race = null;
-  r.objs.forEach((o) => o && o.destroy());
-  raceHudHide();
-  if (sc && r.baseZoom != null) sc.tweens.add({ targets: sc.cameras.main, zoom: r.baseZoom, duration: 450, ease: "Quad.easeOut" });
+function r3Car() {
+  const ctx = R3.ctx, W = R3.W, H = R3.H, img = R3.carCanvas || R3.img.car; if (!img) return;
+  const w = W * 0.30, h = w * (img.height / img.width);
+  const bob = Math.sin(R3.pos * 0.05) * 2;
+  const lean = R3.playerX * 16 + (R3.input.left ? -10 : 0) + (R3.input.right ? 10 : 0);
+  ctx.drawImage(img, W / 2 - w / 2 + lean, H - h - 14 + bob, w, h);
+}
+
+function r3Hud() {
+  const ctx = R3.ctx, W = R3.W;
+  ctx.font = "bold 22px Trebuchet MS, system-ui, sans-serif"; ctx.textBaseline = "top";
+  const t = Math.max(0, R3.time), remain = Math.max(0, Math.round((R3.finishZ - R3.pos) / 100));
+  r3Chip(14, 14, "⏱ " + t.toFixed(1) + "s", t <= 8 ? "#ff6a8a" : "#38e0e6", false);
+  r3Chip(14, 54, "🏁 " + remain + " m", "#ffcf3f", false);
+  r3Chip(W - 14, 14, Math.round((R3.speed / R3.maxSpeed) * 210) + " km/h", "#ff4d97", true);
+  ctx.textAlign = "center"; ctx.fillStyle = "rgba(234,228,255,0.85)"; ctx.font = "bold 15px Trebuchet MS, system-ui, sans-serif";
+  ctx.fillText("◀ ▶ (ou touche gauche/droite de l'écran) pour tourner · Échap : quitter", W / 2, R3.H - 30);
+  ctx.textAlign = "left";
+}
+
+function r3Chip(x, y, text, col, right) {
+  const ctx = R3.ctx, w = ctx.measureText(text).width + 24, bx = right ? x - w : x;
+  ctx.fillStyle = "rgba(20,14,36,0.82)"; r3Round(bx, y, w, 32, 10); ctx.fill();
+  ctx.strokeStyle = col; ctx.lineWidth = 2; r3Round(bx, y, w, 32, 10); ctx.stroke();
+  ctx.fillStyle = "#eae4ff"; ctx.textAlign = right ? "right" : "left";
+  ctx.fillText(text, right ? x - 12 : x + 12, y + 6); ctx.textAlign = "left";
+}
+function r3Round(x, y, w, h, r) { const ctx = R3.ctx; ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+function r3Teardown() {
+  R3.on = false; if (R3.raf) cancelAnimationFrame(R3.raf); R3.raf = 0;
+  R3.listeners.forEach(([t, fn, tg]) => tg.removeEventListener(t, fn)); R3.listeners = [];
+  window.removeEventListener("resize", r3Resize);
+  if (R3.canvas) R3.canvas.classList.add("hidden");
+  race = null;
+}
+
+// End the race: win → reward + stat; quit → neutral; else → time-out.
+function r3End(win, quit) {
+  if (!race && !R3.on) return;
+  r3Teardown();
   if (win) {
-    const reward = RACE.reward || 0;
-    if (reward) state.coins += reward;
+    const reward = RACE.reward || 0; if (reward) state.coins += reward;
     if (statKeys().includes("raceWin")) state.stats.raceWin = (state.stats.raceWin || 0) + 1;
     save(); refreshHud();
-    message((RACE.winMessage || "🏆 Race won! +{r}").replace("{r}", reward));
-  } else if (!silent) {
-    message(RACE.loseMessage || "⏱ Time's up! Race over.");
+    message((RACE.winMessage || "🏆 Course gagnée ! +{r}").replace("{r}", reward));
+  } else if (quit) {
+    message(RACE.quitMessage || "🏁 Tu quittes la course.");
+  } else {
+    message(RACE.loseMessage || "⏱ Temps écoulé !");
   }
   panelId = PANEL_DIRTY; refreshInteraction();
 }
 
-// Race HUD (timer + checkpoint progress) — a small self-contained DOM overlay.
-function raceHudShow() {
-  let el = $("race-hud");
-  if (!el) { el = document.createElement("div"); el.id = "race-hud"; el.className = "race-hud"; document.body.appendChild(el); }
-  el.classList.remove("hidden");
-  raceHudUpdate();
-}
-function raceHudUpdate() {
-  const el = $("race-hud"); if (!el || !race) return;
-  const t = Math.max(0, race.time);
-  el.innerHTML = `<span class="rh-t${t <= 8 ? " low" : ""}">⏱ ${t.toFixed(1)}s</span><span class="rh-cp">🏁 ${race.idx}/${race.cps.length}</span>`;
-}
-function raceHudHide() { const el = $("race-hud"); if (el) el.classList.add("hidden"); }
+// Thin wrappers so existing call sites (panel toggle, dismount, world rebuild) keep working.
+function endRace(win, silent) { if (!race) return; r3End(!!win, !win && !!silent); }
 
 /* ===================== Boot ===================== */
 

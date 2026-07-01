@@ -6,8 +6,8 @@ repo — nothing is reused from any other game's art. They are dedicated to the 
 domain (**CC0**).
 
 Generation scripts: `tools/gen_chars.py` (character walkcycles),
-`tools/gen_world.py` (city, cars, buildings, props, icons) and `tools/gen_race.py`
-(race pedestrian + traffic cone).
+`tools/gen_world.py` (city, cars, buildings, props, icons), `tools/gen_race.py`
+(traffic cone) and `tools/gen_race3d.py` (behind-the-car racing billboards).
 
 | Asset | File | Notes |
 | --- | --- | --- |
@@ -19,8 +19,10 @@ Generation scripts: `tools/gen_chars.py` (character walkcycles),
 | Stations | `assets/img/garage.png`, `gas.png`, `depot.png` | sleep / refuel / delivery job |
 | Street props | `assets/img/palm.png`, `streetlamp.png`, `hydrant.png`, `ramp.png` | scenery; ramp = stunt |
 | Low-fuel bubble | `assets/img/want_gas.png` | "needs gas" indicator over a car |
-| Race pedestrian | `assets/sheet/pedestrian.png` | 4-frame side-walk; moving hazard in races |
-| Traffic cone | `assets/img/cone.png` | static hazard on the road during races |
+| Traffic cone | `assets/img/cone.png` | hazard billboard on the road during races |
+| Race car (rear) | `assets/img/car_back.png` | the player's car seen from behind (tinted to its paint) |
+| Race pedestrian | `assets/img/ped_front.png` | front-facing pedestrian hazard billboard |
+| Roadside buildings | `assets/img/bldg_a.png`, `bldg_b.png` | neon building billboards lining the race road |
 | App icons | `assets/favicon.png`, `assets/apple-touch-icon.png` | generated |
 
 Generic reusable engine building blocks kept for future iteration:
