@@ -841,6 +841,26 @@ function parcelMarker() {
   [[18, 22], [74, 30], [68, 10]].forEach(([x, y], i) => { g += `<path d="${star(x, y, 5 - i, 1.5, 4)}" fill="#fff6b8" filter="url(#pm)"/>`; });
   return job("assets/img/parcel.png", W, H, g, defs);
 }
+// Delivery target painted on the road (seen from above, a flat decal): neon bullseye rings,
+// chevrons pointing in, a parcel glyph in the middle. Drawn as a slightly squashed ellipse
+// so it reads as lying on the ground in the 3/4 view.
+function deliveryTarget() {
+  const W = 180, H = 130, cx = 90, cy = 65, ry = 0.62;
+  const defs = glow("dt", 3) + rad("dtg", [[0, PINK, 0.35], [0.7, PINK, 0.12], [1, PINK, 0]]);
+  let g = `<ellipse cx="${cx}" cy="${cy}" rx="86" ry="${86 * ry}" fill="url(#dtg)"/>`;
+  [[74, PINK, 6], [52, "#fff3fa", 5], [30, PINK, 6]].forEach(([r, c, w]) => {
+    g += `<ellipse cx="${cx}" cy="${cy}" rx="${r}" ry="${r * ry}" fill="none" stroke="${c}" stroke-width="${w}" filter="url(#dt)" opacity=".95"/>`;
+  });
+  g += `<ellipse cx="${cx}" cy="${cy}" rx="14" ry="${14 * ry}" fill="${PINK}" filter="url(#dt)"/>`;
+  // four chevrons pointing to the centre
+  [[0, -1], [0, 1], [-1, 0], [1, 0]].forEach(([dx, dy]) => {
+    const px = cx + dx * 64, py = cy + dy * 64 * ry, s = 9;
+    const a = Math.atan2(-dy * ry, -dx), ca = Math.cos(a), sa = Math.sin(a);
+    const P = (u, v) => `${f2(px + (u * ca - v * sa) * s)} ${f2(py + (u * sa + v * ca) * s * (dy ? ry : 1))}`;
+    g += `<path d="M${P(-1, -1.2)} L${P(0.6, 0)} L${P(-1, 1.2)}" fill="none" stroke="${YELLOW}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#dt)"/>`;
+  });
+  return job("assets/img/target.png", W, H, g, defs);
+}
 function checkerFlag(x, y, w, h, sw, wave) {   // waving checkered flag, top-left at (x,y) attached to pole on the left
   const cols = 4, rows = 3;
   const P = (u, v) => [x + u * w, y + v * h + Math.sin(u * Math.PI * 1.6) * (wave || h * 0.12)];
@@ -1050,7 +1070,7 @@ function build() {
     palm(), streetlamp(), hydrant(), ramp(), bench(), planter(), billboard(),
     towerJob("assets/img/bldg_a.png", 180, 300, { u: "ba", x0: 14, w: 152, d: 0, dy: 0, top: 84, base: 286, wall: "#33407a", accent: CYAN, cols: 4, rows: 8, glyph: "ring", glyph2: "wave", signY: 40, seed: 12 }),
     towerJob("assets/img/bldg_b.png", 200, 260, { u: "bb", x0: 14, w: 172, d: 0, dy: 0, top: 84, base: 246, wall: "#4a2f6e", accent: PINK, win: "strips", cols: 5, rows: 6, glyph: "star", glyph2: "wave", accent2: CYAN, signY: 40, seed: 15 }),
-    wantGas(), parcelMarker(), flag(),
+    wantGas(), parcelMarker(), deliveryTarget(), flag(),
     logo(), splash(),
     icon("assets/favicon.png", 512), icon("assets/apple-touch-icon.png", 180), icon("assets/icon-192.png", 192), icon("assets/icon-maskable.png", 512, 0.78),
     ...IK.jobs(PAL, ["star", "heart", "heartEmpty", "sound", "soundOff", "help", "avatar", "goals", "close", "play", "resume", "check", "gift", "hand", "sparkle", "bell", "refresh", "arrow", "trophy", "moon", "calendar", "palette", "home", "lock"]),

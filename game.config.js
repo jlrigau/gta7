@@ -27,7 +27,7 @@ window.GAME = {
     tagline: "Roule, livre, fais la course… et sème la police !",
     saveKey: "gta7-neon-city",
     audience: { minAge: 10, notes: "arcade/cartoon action, top-down driving, mild — no weapons, no gore, no blood, no explicit content" },
-    assetVersion: "v9",
+    assetVersion: "v10",
     theme: { home: "#160f28", play: "#141024", closeup: "#141024" },
 
     showCoins: true,
@@ -134,7 +134,7 @@ window.GAME = {
       palm: { path: "assets/img/palm.webp", res: 2 }, streetlamp: { path: "assets/img/streetlamp.webp", res: 2 }, hydrant: { path: "assets/img/hydrant.webp", res: 2 },
       ramp: { path: "assets/img/ramp.webp", res: 2 }, bench: { path: "assets/img/bench.webp", res: 2 }, planter: { path: "assets/img/planter.webp", res: 2 },
       billboard: { path: "assets/img/billboard.webp", res: 2 },
-      want_gas: { path: "assets/img/want_gas.webp", res: 2 }, parcel: { path: "assets/img/parcel.webp", res: 2 }, flag: { path: "assets/img/flag.webp", res: 2 },
+      want_gas: { path: "assets/img/want_gas.webp", res: 2 }, parcel: { path: "assets/img/parcel.webp", res: 2 }, target: { path: "assets/img/target.webp", res: 2 }, flag: { path: "assets/img/flag.webp", res: 2 },
       // pseudo-3D race view billboards
       car_back: { path: "assets/img/car_back.webp", res: 2 }, cone: { path: "assets/img/cone.webp", res: 2 },
       bldg_a: { path: "assets/img/bldg_a.webp", res: 2 }, bldg_b: { path: "assets/img/bldg_b.webp", res: 2 },
@@ -194,12 +194,12 @@ window.GAME = {
       { id: "boost", type: "jump", label: "Cascade", icon: "stunt", color: "#ffcf3f" },
     ],
     ride: {
-      fatigueNeed: "fuel", minEnergy: 6, hideRider: true,
+      fatigueNeed: "fuel", hideRider: true,
+      empty: "slow", emptySpeed: 0.25,      // out of fuel: you stay in the car, crawling to the gas station
       sitY: 0, nameY: -72,
       mountMessage: "{i:car} Tu prends le volant de {name} !",
       dismountMessage: "Tu sors de {name}.",
-      exhaustedMessage: "{i:fuel} Panne sèche ! {name} n'a plus d'essence.",
-      tooTired: "{i:fuel} {name} est à sec — va faire le plein !",
+      emptyMessage: "{i:fuel} Panne d'essence ! {name} roule au ralenti : file à la station-service.",
       // stunt jumps pay a little and can clear the ramps
       jump: { distance: 210, cost: 7, minEnergy: 10, reward: 8, rewardMessage: "{i:stunt} Belle cascade ! +{r}", tooTired: "{i:fuel} Pas assez d'essence pour une cascade !" },
     },
@@ -252,12 +252,15 @@ window.GAME = {
           { label: "Dormir", sub: "Passer au jour suivant", icon: "bed", do: "nextDay" },
         ] } },
     { type: "gas", x: 350, y: 880, sprite: "gas", scale: 0.85, label: "Station-service", labelY: 34, icon: "fuel", color: "#ffcf3f",
-      hint: "Le plein pour toutes tes voitures", box: { dx: -110, dy: -60, w: 220, h: 56 },
+      hint: "Le plein pour la voiture que tu conduis", box: { dx: -110, dy: -60, w: 220, h: 56 },
+      requireMounted: true, needMountMessage: "{i:car} Viens en voiture pour faire le plein !",
       action: "custom", actionLabel: "Faire le plein (15)",
       onUse: (state, api) => {
+        const car = api.ride;                                   // only the car you are driving
+        if (car.fuel >= 100) { api.message("{i:fuel} Le réservoir de " + car.name + " est déjà plein !"); return; }
         if (!api.spend(15)) return;
-        (state.creatures || []).forEach((c) => { c.fuel = 100; });
-        api.message("{i:fuel} Plein fait pour toutes tes voitures !");
+        car.fuel = 100;
+        api.message("{i:fuel} Plein fait pour " + car.name + " !");
         api.refreshHud(); api.save();
       } },
     { type: "depot", x: 2060, y: 880, sprite: "depot", scale: 0.85, label: "Dépôt", labelY: 34, icon: "parcel", color: "#6ef0a0",
@@ -271,17 +274,24 @@ window.GAME = {
   /* ---- Deliveries (Depot): a destination on the map; "hot" cargo pays more but brings the cops ---- */
   missions: {
     title: "{i:parcel} Bureau des livraisons", subtitle: "Choisis ta course :",
-    stat: "jobs", radius: 90, color: "#6ef0a0", marker: "parcel", markerScale: 0.8,
+    stat: "jobs", radius: 90, color: "#6ef0a0", marker: "parcel", markerScale: 1.25,
     offers: [
-      { label: "Livraison tranquille", sub: "{i:cash} 45 — aucun risque", icon: "parcel", pay: 45 },
-      { label: "Cargaison sensible", sub: "{i:cash} 120 — mais la police rôde {i:wanted}{i:wanted}", icon: "wanted", pay: 120, heat: 2 },
+      { label: "Livraison tranquille", sub: "Récupère le colis, livre-le : {i:cash} 45, aucun risque", icon: "parcel", pay: 45 },
+      { label: "Cargaison sensible", sub: "{i:cash} 120 — mais dès que tu as le colis, la police te prend en chasse {i:wanted}{i:wanted}", icon: "wanted", pay: 120, heat: 2 },
     ],
+    // two legs: pick the parcel up here (parcel marker), then deliver it to a destination (ground target)
+    pickups: [
+      { x: 1000, y: 200, name: "le marché Nord" }, { x: 2200, y: 1000, name: "le quai Est" },
+      { x: 220, y: 1020, name: "la station Ouest" }, { x: 1200, y: 1580, name: "le port" },
+    ],
+    target: "target", targetScale: 1, cargoIcon: "parcel", cargoLabel: "Colis",
     dests: [
       { x: 560, y: 700, name: "le quartier Ouest" }, { x: 1860, y: 700, name: "le quartier Est" },
       { x: 560, y: 1360, name: "les Docks" }, { x: 1860, y: 1360, name: "la Zone" }, { x: 1200, y: 1380, name: "le Front de mer" },
     ],
-    takenMessage: "{i:parcel} En route ! Livre à {d}. Suis la flèche.",
-    hotMessage: "{i:wanted} Cargaison sensible ! Les flics arrivent. File livrer à {d} !",
+    takenMessage: "{i:parcel} Va chercher le colis à {p}. Suis la flèche !",
+    pickedMessage: "{i:parcel} Colis récupéré ! Emmène-le jusqu'à la cible : {d}.",
+    hotPickedMessage: "{i:wanted} Colis récupéré… les flics arrivent ! File jusqu'à la cible : {d} !",
     doneMessage: "{i:check} Livré ! +{p}",
     busyMessage: "{i:parcel} Termine d'abord ta livraison en cours !",
   },
@@ -368,11 +378,11 @@ window.GAME = {
   help: [
     "<b>Bienvenue à Neon City !</b> Roule, livre, fais la course… et gère la police.",
     "{i:hand} <b>Se déplacer :</b> touche où aller (touche deux fois vite pour courir). {i:car} <b>Conduire :</b> touche une voiture puis « Conduire ».",
-    "{i:parcel} <b>Livraisons (Dépôt) :</b> une destination apparaît sur la carte, suis la flèche pour être payé.",
+    "{i:parcel} <b>Livraisons (Dépôt) :</b> suis la flèche jusqu'au <b>colis</b>, récupère-le, puis emmène-le jusqu'à la <b>cible</b> au sol pour être payé.",
     "{i:wanted} <b>Cargaisons sensibles :</b> elles paient gros mais la police te prend en chasse. Sème-la en roulant vite, ou repeins ta voiture au {i:garage} <b>Garage</b>.",
     "{i:flag} <b>Course :</b> au volant, « Course » : vue derrière la voiture. Touche à gauche ou à droite pour tourner, évite les plots et rejoins l'arrivée avant le chrono.",
     "{i:dealer} <b>Concession :</b> achète des voitures plus rapides ({i:speed} vitesse, {i:grip} tenue, {i:range} autonomie).",
-    "{i:fuel} <b>Essence :</b> elle baisse en roulant ; fais le plein à la station-service. {i:stunt} <b>Cascade :</b> saute par-dessus une rampe pour un bonus.",
+    "{i:fuel} <b>Essence :</b> elle baisse en roulant (et pendant les courses). Panne sèche : la voiture roule au ralenti, alors file au volant jusqu'à la <b>station-service</b> pour faire le plein. {i:stunt} <b>Cascade :</b> saute par-dessus une rampe pour un bonus.",
     "{i:goals} <b>Grades :</b> Bleu → Chauffeur → As du volant → Caïd. Sauvegarde automatique.",
   ],
 };
