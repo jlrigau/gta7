@@ -27,7 +27,7 @@ window.GAME = {
     tagline: "Roule, livre, fais la course… et sème la police !",
     saveKey: "gta7-neon-city",
     audience: { minAge: 10, notes: "arcade/cartoon action, top-down driving, mild — no weapons, no gore, no blood, no explicit content" },
-    assetVersion: "v11",
+    assetVersion: "v12",
     theme: { home: "#160f28", play: "#141024", closeup: "#141024" },
 
     showCoins: true,
@@ -55,7 +55,7 @@ window.GAME = {
     nameLabel: "Nom", confirm: "Valider", nameTaken: "Ce nom est déjà pris.", cancel: "Annuler",
     strings: {
       closeLabel: "Fermer", soundLabel: "Son", coinsLabel: "Argent", dayLabel: "Jour", levelLabel: "Grade",
-      noSave: "Aucune partie sauvegardée.", refreshLabel: "Rafraîchir",
+      noSave: "Aucune partie sauvegardée.", refreshLabel: "Rafraîchir", dismountFirst: "{i:car} Sors de la voiture d'abord !",
       goalComplete: "{i:goals} Objectif réussi : {name} !", goalsComplete: "{i:goals} {n} objectifs réussis !",
       levelUp: "{i:trophy} Promotion ! Tu passes au grade {n} !", goalsTitle: "{i:goals} Grades",
       allGoalsDone: "Tu as tout réussi : tu es le roi de Neon City !", goalsProgress: "{done}/{total} objectifs — réussis-les pour passer au grade {next}",
@@ -216,11 +216,11 @@ window.GAME = {
   race: {
     time: 70, reward: 110, stat: "raceWin", hitPenalty: 3,
     sprite: "car_back",
-    roadside: ["bldg_a", "bldg_b", "palm", "streetlamp"], roadsideScale: 9,
-    spriteZoom: 0.05,
+    roadside: ["bldg_a", "bldg_b", "palm", "streetlamp"], roadsideScale: 7,
+    spriteZoom: 0.13,                 // a car ahead is the size of yours once it reaches you
     track: { segments: 1100, speed: 1.0, steer: 2.6, centrifugal: 0.65 },
     obstacles: [
-      { sprite: "cone", every: 30, phase: 0, scale: 4.2, hw: 0.30, spread: 0.6 },
+      { sprite: "cone", every: 30, phase: 0, scale: 2.4, hw: 0.2, spread: 0.6 },
       { sprite: "car_back", every: 52, phase: 22, scale: 6.5, hw: 0.36, spread: 0.42 },
     ],
     colors: { sky: ["#241a4d", "#5b2a6e", "#e0566e"], sun: ["#ffd36a", "#ff5d7a"], skyline: "#2a1c4a", ground: "#1d1838",
@@ -265,10 +265,10 @@ window.GAME = {
       } },
     { type: "depot", x: 2060, y: 880, sprite: "depot", scale: 0.85, label: "Dépôt", labelY: 34, icon: "parcel", color: "#6ef0a0",
       hint: "Prendre une livraison", box: { dx: -110, dy: -64, w: 220, h: 60 },
-      action: "missions", actionLabel: "Prendre une livraison" },
+      whileRiding: true, action: "missions", actionLabel: "Prendre une livraison" },
     { type: "dealer", x: 1200, y: 320, sprite: "dealer", scale: 0.85, label: "Concession", labelY: 34, icon: "dealer", color: "#38e0e6",
       hint: "Des voitures plus rapides", box: { dx: -120, dy: -64, w: 240, h: 60 },
-      action: "models", actionLabel: "Voir les voitures" },
+      whileRiding: true, action: "models", actionLabel: "Voir les voitures" },
   ],
 
   /* ---- Deliveries (Depot): a destination on the map; "hot" cargo pays more but brings the cops ---- */
