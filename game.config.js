@@ -120,7 +120,7 @@ window.GAME = {
       { x: 1468, y: 1210, w: 64, h: 128, tile: "crosswalk" },
     ],
   },
-  camera: { fitW: 1100, fitH: 1000, min: 0.42, max: 0.85 },
+  camera: { fitW: 800, fitH: 900, min: 0.45, max: 0.85 },
 
   /* ---- Assets (all generated, CC0) ---- */
   assets: {
@@ -195,7 +195,7 @@ window.GAME = {
     ],
     ride: {
       fatigueNeed: "fuel", minEnergy: 6, hideRider: true,
-      sitY: 0, nameY: -96,
+      sitY: 0, nameY: -72,
       mountMessage: "{i:car} Tu prends le volant de {name} !",
       dismountMessage: "Tu sors de {name}.",
       exhaustedMessage: "{i:fuel} Panne sèche ! {name} n'a plus d'essence.",
@@ -216,7 +216,7 @@ window.GAME = {
   race: {
     time: 70, reward: 110, stat: "raceWin", hitPenalty: 3,
     sprite: "car_back",
-    roadside: ["bldg_a", "bldg_b", "palm", "streetlamp"],
+    roadside: ["bldg_a", "bldg_b", "palm", "streetlamp"], roadsideScale: 9,
     spriteZoom: 0.05,
     track: { segments: 1100, speed: 1.0, steer: 2.6, centrifugal: 0.65 },
     obstacles: [
@@ -236,7 +236,7 @@ window.GAME = {
   },
 
   /* ---- Roaming bounds for the parked cars (invisible) ---- */
-  zones: [{ id: "streets", home: true, rect: { x: 760, y: 900, w: 880, h: 300 } }],
+  zones: [{ id: "streets", home: true, rect: { x: 700, y: 1010, w: 1000, h: 180 } }],
 
   /* ---- Buildings ---- */
   stations: [

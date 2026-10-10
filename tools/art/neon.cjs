@@ -220,20 +220,19 @@ function personHair(k, cx, cy, r, view, layer, sway) {
     if (view === "down") {
       if (layer === "back") return `<path d="M${cx - r * 1.04} ${cy + r * 0.1} Q${cx - r * 1.1} ${cy - r * 0.5} ${cx - r * 0.8} ${cy - r * 0.6} L${cx + r * 0.8} ${cy - r * 0.6} Q${cx + r * 1.1} ${cy - r * 0.5} ${cx + r * 1.04} ${cy + r * 0.1} Z" fill="${H}" ${st}/>`;
       let g = `<path d="M${cx - r * 0.98} ${cy - r * 0.05} Q${cx - r * 0.9} ${cy - r * 0.45} ${cx - r * 0.6} ${cy - r * 0.4} L${cx - r * 0.75} ${cy + r * 0.12} Z M${cx + r * 0.98} ${cy - r * 0.05} Q${cx + r * 0.9} ${cy - r * 0.45} ${cx + r * 0.6} ${cy - r * 0.4} L${cx + r * 0.75} ${cy + r * 0.12} Z" fill="${H}" ${stk(2)}/>`;
-      g += `<path d="M${cx - r * 1.04} ${cy - r * 0.3} A${r * 1.04} ${r * 1.08} 0 0 1 ${cx + r * 1.04} ${cy - r * 0.3} Z" fill="${C}" ${st}/>`;
-      g += `<path d="M${cx - r * 0.55} ${cy - r * 0.72} Q${cx} ${cy - r * 1.0} ${cx + r * 0.55} ${cy - r * 0.72}" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/>`;
-      g += `<path d="${star(cx, cy - r * 0.62, r * 0.2, r * 0.09)}" fill="${PINK}" ${stk(1.5)}/>`;
+      g += `<path d="M${cx - r * 1.04} ${cy - r * 0.3} A${r * 1.04} ${r * 0.94} 0 0 1 ${cx + r * 1.04} ${cy - r * 0.3} Z" fill="${C}" ${st}/>`;
+      g += `<path d="M${cx - r * 0.55} ${cy - r * 0.78} Q${cx} ${cy - r * 1.0} ${cx + r * 0.55} ${cy - r * 0.78}" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/>`;
+      g += `<path d="${star(cx, cy - r * 0.64, r * 0.2, r * 0.09)}" fill="${PINK}" ${stk(1.5)}/>`;
       g += `<path d="M${cx - r * 1.0} ${cy - r * 0.3} Q${cx} ${cy + r * 0.02} ${cx + r * 1.0} ${cy - r * 0.3} Q${cx} ${cy - r * 0.48} ${cx - r * 1.0} ${cy - r * 0.3} Z" fill="${CD}" ${st}/>`;   // brim
-      g += `<circle cx="${cx}" cy="${cy - r * 1.06}" r="${r * 0.1}" fill="${CD}" ${stk(2)}/>`;
       return g;
     }
     // side, facing left
     if (layer === "back") return "";
     let g = `<path d="M${cx - r * 0.1} ${cy - r * 0.4} Q${cx + r * 0.7} ${cy - r * 0.5} ${cx + r * 0.98} ${cy - r * 0.1} Q${cx + r * 1.0} ${cy + r * 0.45} ${cx + r * 0.62} ${cy + r * 0.7} Q${cx + r * 0.3} ${cy + r * 0.1} ${cx - r * 0.1} ${cy - r * 0.1} Z" fill="${H}" ${st}/>`;
-    g += `<path d="M${cx - r * 1.0} ${cy - r * 0.3} A${r * 1.04} ${r * 1.06} 0 0 1 ${cx + r * 1.04} ${cy - r * 0.22} Q${cx} ${cy - r * 0.4} ${cx - r * 1.0} ${cy - r * 0.3} Z" fill="${C}" ${st}/>`;
+    g += `<path d="M${cx - r * 1.0} ${cy - r * 0.3} A${r * 1.04} ${r * 0.95} 0 0 1 ${cx + r * 1.04} ${cy - r * 0.22} Q${cx} ${cy - r * 0.4} ${cx - r * 1.0} ${cy - r * 0.3} Z" fill="${C}" ${st}/>`;
     g += `<path d="M${cx - r * 0.95} ${cy - r * 0.34} L${cx - r * 1.62} ${cy - r * 0.22} Q${cx - r * 1.7} ${cy - r * 0.06} ${cx - r * 1.4} ${cy - r * 0.06} L${cx - r * 0.85} ${cy - r * 0.16} Z" fill="${CD}" ${st}/>`;
     g += `<path d="M${cx - r * 0.5} ${cy - r * 0.78} Q${cx} ${cy - r * 1.0} ${cx + r * 0.5} ${cy - r * 0.78}" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/>`;
-    g += `<circle cx="${cx + r * 0.05}" cy="${cy - r * 1.04}" r="${r * 0.1}" fill="${CD}" ${stk(2)}/>`;
+    g += `<circle cx="${cx + r * 0.05}" cy="${cy - r * 1.12}" r="${r * 0.1}" fill="${CD}" ${stk(2)}/>`;
     return g;
   }
   // ponytail
@@ -264,7 +263,7 @@ function personHair(k, cx, cy, r, view, layer, sway) {
 // A character in a 128×128 frame; feet (sole bottom) ≈ y 120. dir: up|left|down|right
 function person(k, dir, phase, moving, u) {
   const step = moving ? Math.sin(phase) : 0, bob = moving ? -Math.abs(Math.sin(phase)) * 2.5 : 0;
-  const cx = 64, hy = 35 + bob, r = 24, b = bob;
+  const cx = 64, hy = 37 + bob, r = 24, b = bob;
   const st = stk(3), J = k.jacket, JD = shade(J, -0.22), sway = moving ? Math.sin(phase) * 2 : 0;
   const defs = rad(`${u}s`, [[0, shade(k.skin, 0.2)], [1, k.skin]], 0.4, 0.35, 0.7) +
     lin(`${u}j`, [[0, shade(J, 0.22)], [0.6, J], [1, shade(J, -0.15)]], 0, 0, 1, 1) +
@@ -545,7 +544,7 @@ function dealer() {
   g += fascia(x0 + 8, top + 6, w - 16, 24, A, u);
   const kx = x0 + w / 2, ky = top + 16;
   g += neon(`M${kx - 30} ${ky} m-6 0 a6 6 0 1 0 12 0 a6 6 0 1 0 -12 0 M${kx - 24} ${ky} H${kx + 10} M${kx + 2} ${ky} V${ky + 5} M${kx + 8} ${ky} V${ky + 4}`, YELLOW, 2, `${u}n`);
-  g += neon(`M${kx + 22} ${ky - 6} L${kx + 30} ${ky + 4} L${kx + 38} ${ky - 6}`, PINK, 2, `${u}n`);
+  g += neon(star(kx + 32, ky, 8, 3.6), PINK, 1.8, `${u}n`) + neon(star(kx - 50, ky, 6, 2.7), CYAN, 1.6, `${u}n`);
   g += box3Lines(x0, top, w, base, d, dy);
   g += neon(`M${x0 + 5} ${top + 3} H${x0 + w - 5}`, A, 2.4, `${u}n`);
   // feather flags
@@ -584,7 +583,7 @@ function garage() {
   // hazard stripes on door jambs
   // fascia with spray can + rainbow mist
   g += fascia(x0 + 8, top + 8, w - 16, 28, A, u);
-  g += `<g>${sprayCan(x0 + w / 2 - 26, top + 22, 0.42, 2, PINK)}</g>`;
+  g += `<g>${sprayCan(x0 + w / 2 - 26, top + 22, 0.5, 2, PINK)}</g>`;
   [[x0 + w / 2 - 6, top + 14, CYAN], [x0 + w / 2 + 6, top + 20, YELLOW], [x0 + w / 2 + 18, top + 14, PINK], [x0 + w / 2 + 30, top + 21, VIOLET], [x0 + w / 2 + 42, top + 15, CYAN]].forEach(([x, y, c]) => { g += `<circle cx="${x}" cy="${y}" r="3.6" fill="${c}" filter="url(#${u}n)"/>`; });
   g += box3Lines(x0, top, w, base, d, dy);
   g += neon(`M${x0 + 5} ${top + 3} H${x0 + w - 5}`, A, 2.4, `${u}n`);
@@ -748,7 +747,8 @@ function ramp() {
   // front lip (the low edge) + top surface
   g += `<path d="M14 90 L36 20 H104 L126 90 Z" fill="url(#rs)"/>`;
   g += `<g clip-path="url(#rc)">`;
-  for (let i = -4; i < 12; i++) g += `<path d="M${i * 18} 100 L${i * 18 + 34} 10 L${i * 18 + 44} 10 L${i * 18 + 10} 100 Z" fill="#2a2550"/>`;
+  [74, 50, 30].forEach((y, i) => { const hw = 40 - i * 6; g += `<path d="M${70 - hw} ${y + 12} L70 ${y - 4} L${70 + hw} ${y + 12} L${70 + hw} ${y + 22} L70 ${y + 6} L${70 - hw} ${y + 22} Z" fill="#2a2550"/>`; });
+  [[24, 90, 40, 20], [116, 90, 100, 20]].forEach(([a, b, c, d]) => { g += `<path d="M${a} ${b} L${c} ${d}" stroke="#ff4fa0" stroke-width="6"/>`; });
   g += `<rect x="0" y="16" width="140" height="10" fill="#ff4fa0"/>`;
   g += `<path d="M0 22 H140" stroke="#fff" stroke-width="2" opacity=".6"/>`;
   g += `</g>`;
@@ -821,9 +821,9 @@ function cone() {
 function wantGas() {
   const W = 96, H = 96;
   const defs = rad("wb", [[0, "#ffffff"], [1, "#e8ecff"]]) + glow("wg", 3) + lin("wp", [[0, "#ff8a8a"], [1, "#e0304a"]]);
-  let g = `<circle cx="48" cy="44" r="38" fill="${ORANGE}" opacity=".45" filter="url(#wg)"/>`;
-  g += `<path d="M48 90 L38 76 A38 38 0 1 1 58 76 Z" fill="url(#wb)" stroke="${ORANGE}" stroke-width="5" stroke-linejoin="round"/>`;
-  g += `<path d="M48 90 L38 76 A38 38 0 1 1 58 76 Z" fill="none" ${stk(2.4)}/>`;
+  let g = `<circle cx="48" cy="44" r="33" fill="${ORANGE}" opacity=".45" filter="url(#wg)"/>`;
+  g += `<path d="M48 88 L39 74.5 A34 34 0 1 1 57 74.5 Z" fill="url(#wb)" stroke="${ORANGE}" stroke-width="5" stroke-linejoin="round"/>`;
+  g += `<path d="M48 88 L39 74.5 A34 34 0 1 1 57 74.5 Z" fill="none" ${stk(2.4)}/>`;
   g += `<rect x="30" y="22" width="26" height="40" rx="5" fill="url(#wp)" ${stk(3)}/><rect x="35" y="28" width="16" height="11" rx="2" fill="#bff6ff" ${stk(2)}/>`;
   g += `<path d="M56 32 Q66 32 65 42 V54 Q65 58 61 58" fill="none" stroke="${INK}" stroke-width="3.4" stroke-linecap="round"/><rect x="60" y="24" width="8" height="10" rx="2" fill="#2a2d55" ${stk(2)}/>`;
   g += `<rect x="27" y="60" width="32" height="6" rx="2" fill="#2a2d55" ${stk(2)}/>`;
@@ -886,9 +886,9 @@ const GAME_ICONS = {
     b += IK.shine("M42 60 Q44 48 54 44") + `<rect x="16" y="90" width="96" height="22" rx="8" fill="#3a3f78" ${st7()}/>`;
     return { defs: d + d2, body: b }; },
   wanted: () => { const [d, f] = IK.fill(P.gold);
-    const pts = []; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / 5; pts.push([64 + Math.cos(a) * 46, 66 + Math.sin(a) * 46]); }
-    let b = pts.map(([x, y]) => `<circle cx="${f2(x)}" cy="${f2(y)}" r="9" fill="${f}" ${st7(6)}/>`).join("");
-    b += `<path d="${star(64, 66, 48, 22)}" fill="${f}" ${st7()}/><circle cx="64" cy="66" r="13" fill="#fff6c2" ${st7(5)}/><circle cx="64" cy="66" r="4.5" fill="${INK}"/>`;
+    let b = `<path d="${star(64, 68, 44, 21)}" fill="${f}" ${st7()}/>`;
+    for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / 5; b += `<circle cx="${f2(64 + Math.cos(a) * 45)}" cy="${f2(68 + Math.sin(a) * 45)}" r="9.5" fill="${f}" ${st7(6)}/>`; }
+    b += `<circle cx="64" cy="68" r="14" fill="#fff6c2" ${st7(5)}/><circle cx="64" cy="68" r="5" fill="${INK}"/>${IK.shine("M50 52 L56 42")}`;
     return { defs: d, body: b }; },
   flag: () => ({ defs: "", body: `<rect x="18" y="12" width="12" height="106" rx="5" fill="#c9cde2" ${st7(6)}/><circle cx="24" cy="12" r="8" fill="${P.gold}" ${st7(5)}/>` + checkerFlag(30, 20, 84, 60, 7, 8) }),
   dealer: () => { const [d, f] = IK.fill(P.gold); const [d2, ft] = IK.fill(PINK);
@@ -897,20 +897,22 @@ const GAME_ICONS = {
     b += `<path d="M60 92 L98 112 M80 102 L76 112 M90 107 L86 116" ${st7(18)}/><path d="M60 92 L98 112 M80 102 L76 112 M90 107 L86 116" stroke="${P.gold}" stroke-width="7" stroke-linecap="round"/>` + IK.shine("M28 66 Q30 58 38 54");
     return { defs: d + d2, body: b }; },
   garage: () => { let b = sprayCan(56, 70, 1.65, 7, PINK); [[96, 26, P.teal], [108, 44, P.gold], [92, 46, P.purple], [112, 22, PINK]].forEach(([x, y, c]) => { b += `<circle cx="${x}" cy="${y}" r="7" fill="${c}" ${st7(4)}/>`; }); return { defs: "", body: b }; },
-  wrench: () => { const [d, f] = IK.fill("#b9c0dc");
-    const b = `<g transform="rotate(45 64 64)"><path d="M56 40 V112 Q56 120 64 120 Q72 120 72 112 V40 Q86 34 86 18 Q86 8 80 4 V22 L64 28 L48 22 V4 Q42 8 42 18 Q42 34 56 40 Z" fill="${f}" ${st7()}/><path d="M60 50 V108" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".6"/></g>`;
+  wrench: () => { const [d, f] = IK.fill("#c3c9e4");
+    const b = `<g transform="translate(64 64) scale(0.86) rotate(45) translate(-64 -62)"><path d="M52 44 V110 Q52 122 64 122 Q76 122 76 110 V44 Q92 38 92 20 Q92 8 84 2 V22 L64 30 L44 22 V2 Q36 8 36 20 Q36 38 52 44 Z" fill="${f}" ${st7()}/><path d="M58 52 V110" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".7"/><circle cx="64" cy="108" r="5" fill="#6d7393"/></g>`;
     return { defs: d, body: b }; },
   speed: () => { const [d, f] = IK.fill(P.gold); return { defs: d, body: `<path d="M74 8 L28 70 H60 L50 120 L102 52 H70 Z" fill="${f}" ${st7()}/>${IK.shine("M64 24 L46 52")}` }; },
-  grip: () => { const [d, f] = IK.fill("#c9cde2");
-    let b = `<circle cx="64" cy="64" r="52" fill="#2a2550" ${st7()}/>`;
-    for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; b += `<path d="M${f2(64 + Math.cos(a) * 42)} ${f2(64 + Math.sin(a) * 42)} L${f2(64 + Math.cos(a) * 50)} ${f2(64 + Math.sin(a) * 50)}" stroke="#4a4766" stroke-width="7" stroke-linecap="round"/>`; }
-    b += `<circle cx="64" cy="64" r="26" fill="${f}" ${st7(6)}/><circle cx="64" cy="64" r="9" fill="${P.teal}" ${st7(4)}/>${IK.shine("M30 50 Q34 34 48 26")}`;
+  grip: () => { const [d, f] = IK.fill("#d5dbf0");
+    let b = `<circle cx="64" cy="64" r="52" fill="#4a4576" ${st7()}/><circle cx="64" cy="64" r="40" fill="none" stroke="#2a2550" stroke-width="4"/>`;
+    for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; b += `<path d="M${f2(64 + Math.cos(a) * 43)} ${f2(64 + Math.sin(a) * 43)} L${f2(64 + Math.cos(a) * 52)} ${f2(64 + Math.sin(a) * 52)}" stroke="${INK}" stroke-width="7" stroke-linecap="round"/>`; }
+    b += `<circle cx="64" cy="64" r="28" fill="${f}" ${st7(6)}/>`;
+    for (let i = 0; i < 5; i++) { const a = i * 1.2566 - 1.57; b += `<path d="M64 64 L${f2(64 + Math.cos(a) * 22)} ${f2(64 + Math.sin(a) * 22)}" stroke="#8a90aa" stroke-width="5" stroke-linecap="round"/>`; }
+    b += `<circle cx="64" cy="64" r="9" fill="${P.teal}" ${st7(4)}/>${IK.shine("M26 48 Q32 30 48 22")}`;
     return { defs: d, body: b }; },
   range: () => { const [d, f] = IK.fill(P.orange); return { defs: d, body: `<path d="M64 10 Q100 58 100 80 Q100 116 64 116 Q28 116 28 80 Q28 58 64 10 Z" fill="${f}" ${st7()}/>${IK.shine("M44 80 Q44 66 54 56")}` }; },
-  stunt: () => { const r = carSide({ body: PINK, stripe: CYAN, sw: 12, u: "is" });
-    let b = `<path d="M10 112 L118 112 L118 74 Z" fill="${P.gold}" ${st7()}/><path d="M40 112 L58 101 M70 112 L88 92 M100 112 L114 84" stroke="#2a2550" stroke-width="7"/>`;
-    b += `<g transform="translate(14 22) rotate(-22) scale(0.3)">${r.body}</g>`;
-    b += `<path d="${star(26, 30, 14, 4.5, 4)}" fill="#fff" ${st7(4)}/>`;
+  stunt: () => { const r = carSide({ body: "#e8357a", stripe: CYAN, sw: 14, u: "is" });
+    let b = `<path d="M8 116 L120 116 L120 80 Z" fill="${P.gold}" ${st7()}/><path d="M48 116 L64 104 M78 116 L96 96 M104 116 L116 88" stroke="#2a2550" stroke-width="8"/>`;
+    b += `<g transform="translate(8 56) rotate(-20) scale(0.34)">${r.body}</g>`;
+    b += `<path d="${star(24, 20, 15, 5, 4)}" fill="#fff" ${st7(4)}/><path d="${star(112, 30, 9, 3, 4)}" fill="${P.gold}" ${st7(3)}/>`;
     return { defs: r.defs, body: b }; },
   bed: () => { const [d, f] = IK.fill(P.purple);
     let b = `<rect x="12" y="40" width="14" height="74" rx="5" fill="#8d93b8" ${st7(6)}/><rect x="102" y="66" width="14" height="48" rx="5" fill="#8d93b8" ${st7(6)}/>`;
@@ -1017,9 +1019,9 @@ function splash() {
   g += `<g transform="translate(20 640) scale(1.7)">${inner(pm)}</g><g transform="translate(700 650) scale(1.62)">${inner(pm).replace(/id="p/g, 'id="q').replace(/#p/g, "#q")}</g>`;
   g += `<g transform="translate(232 690) scale(1.75)">${inner(sl)}</g>`;
   // the car + the two heroes
-  g += `<ellipse cx="450" cy="1132" rx="260" ry="22" fill="#000" opacity=".45" filter="url(#sbl)"/>`;
-  g += `<g transform="translate(450 1135) scale(1.55) translate(-160 -118)">${cs.body}</g>`;
-  [["man", 215, 1150, 2.7], ["woman", 690, 1150, 2.7]].forEach(([id, x, y, s], i) => {
+  g += `<ellipse cx="450" cy="1098" rx="300" ry="24" fill="#000" opacity=".45" filter="url(#sbl)"/>`;
+  g += `<g transform="translate(450 1102) scale(1.85) translate(-160 -118)">${cs.body}</g>`;
+  [["man", 178, 1165, 2.6], ["woman", 724, 1165, 2.6]].forEach(([id, x, y, s], i) => {
     const r = person(PEOPLE[id], "down", 0, false, "sp" + i); defs += r.defs;
     g += `<ellipse cx="${x}" cy="${y - 2}" rx="${30 * s}" ry="${6 * s}" fill="#000" opacity=".4" filter="url(#sbl)"/>`;
     g += `<g transform="translate(${x} ${y}) scale(${s}) translate(-64 -121)">${r.body}</g>`;
@@ -1046,8 +1048,8 @@ function build() {
     towerJob("assets/img/tower_pink.png", 240, 340, { u: "tp", x0: 30, w: 150, d: 28, dy: 20, top: 110, base: 326, wall: "#4a2f6e", accent: PINK, win: "strips", cols: 4, rows: 9, glyph: "moon", glyph2: "star", accent2: CYAN, seed: 8, antenna: 0 }),
     dealer(), garage(), gas(), depot(), shopBlock(),
     palm(), streetlamp(), hydrant(), ramp(), bench(), planter(), billboard(),
-    towerJob("assets/img/bldg_a.png", 180, 300, { u: "ba", x0: 14, w: 152, d: 0, dy: 0, top: 84, base: 292, wall: "#33407a", accent: CYAN, cols: 4, rows: 8, glyph: "ring", glyph2: "wave", signY: 40, seed: 12 }),
-    towerJob("assets/img/bldg_b.png", 200, 260, { u: "bb", x0: 14, w: 172, d: 0, dy: 0, top: 84, base: 252, wall: "#4a2f6e", accent: PINK, win: "strips", cols: 5, rows: 6, glyph: "star", glyph2: "wave", accent2: CYAN, signY: 40, seed: 15 }),
+    towerJob("assets/img/bldg_a.png", 180, 300, { u: "ba", x0: 14, w: 152, d: 0, dy: 0, top: 84, base: 286, wall: "#33407a", accent: CYAN, cols: 4, rows: 8, glyph: "ring", glyph2: "wave", signY: 40, seed: 12 }),
+    towerJob("assets/img/bldg_b.png", 200, 260, { u: "bb", x0: 14, w: 172, d: 0, dy: 0, top: 84, base: 246, wall: "#4a2f6e", accent: PINK, win: "strips", cols: 5, rows: 6, glyph: "star", glyph2: "wave", accent2: CYAN, signY: 40, seed: 15 }),
     wantGas(), parcelMarker(), flag(),
     logo(), splash(),
     icon("assets/favicon.png", 512), icon("assets/apple-touch-icon.png", 180), icon("assets/icon-192.png", 192), icon("assets/icon-maskable.png", 512, 0.78),
