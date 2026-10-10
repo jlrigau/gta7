@@ -15,8 +15,8 @@ a known set of files with **zero game content**, so they port across unrelated r
 > harvests it.)
 
 ## What moves vs what doesn't
-- **Backported (engine layer):** `engine.js`, `ENGINE.md`, `.claude/skills/` (incl.
-  `_shared/` tooling). Optionally `vendor/`, `.github/workflows/` if they changed.
+- **Backported (engine layer):** `engine.js`, `engine.css`, `ENGINE.md`, `.claude/skills/`
+  (incl. `_shared/` tooling). Optionally `vendor/` (Phaser, fonts), `.github/workflows/`.
 - **Never backported (game layer):** `game.config.js`, `assets/`, `index.html`,
   `style.css`, `manifest.webmanifest`, `README.md`, `tools/`, `.claude/settings*.json`.
 - **By hand:** `CLAUDE.md` (mixes engine conventions + template identity) — merge only the

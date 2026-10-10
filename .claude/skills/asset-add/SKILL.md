@@ -11,7 +11,10 @@ Integrate a chosen asset end-to-end (output of **asset-search**), or a generated
 - `assets/img/` : single ready-to-use images (ground, buildings, trees, decor).
 - `assets/sheet/` : spritesheets used at runtime (creatures, characters, fences).
 - `assets/ui/` : menu thumbnails.
-- Slicing/generation: **Pillow + numpy** (`pip install pillow numpy` if needed) — Bash.
+- Generation (preferred for original art): the game's **SVG art module**
+  `tools/art/<game>.cjs` rendered by `.claude/skills/_shared/render-svg.cjs` (headless
+  Chromium; gradients, glows, anti-aliasing) — add a function, re-render with `--only`.
+- Slicing external files: **Pillow + numpy** (`pip install pillow numpy` if needed) — Bash.
 
 ## Procedure
 1. **Get the source** (Bash `curl` to download, or generate procedurally with Pillow
@@ -19,7 +22,8 @@ Integrate a chosen asset end-to-end (output of **asset-search**), or a generated
 2. **Crop / slice** with a small Python (Pillow) script:
    - Crop a single sprite → `assets/img/<name>.png`.
    - Or slice an animated sheet (known grids: characters **64×64** of a 9-col sheet,
-     fences **32×32**; the demo creature sheet is **64×64**, 4 frames).
+     fences **32×32** legacy / 80×80 drawn at `fence.scale:0.5`; the demo creature sheets are
+     **128×128**, 4 frames).
    - Keep transparency (RGBA), don't distort the style.
 3. **Register the texture** in `game.config.js` → `GAME.assets`:
    - Single image: add to `GAME.assets.images` → `key: "assets/img/<file>.png"`.

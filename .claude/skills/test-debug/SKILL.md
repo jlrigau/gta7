@@ -15,7 +15,17 @@ Requirements: `python3`, `node` + Playwright.
 
 2. **Serve** — Bash: `bash .claude/skills/_shared/serve.sh 8099`.
 
-3. **Runtime + assertions** — Bash, via the `playtest.cjs` harness:
+3. **Standard regression tour** (always, in addition to your own scenario) — it asserts
+   the core loop and screenshots every screen; then LOOK at them (skill **visual-review**):
+   ```bash
+   OUT=/tmp/tour node .claude/skills/_shared/playtest.cjs --viewport 390x844 \
+     --probe .claude/skills/_shared/probes/tour.cjs && python3 .claude/skills/_shared/contact-sheet.py /tmp/tour
+   ```
+   `probe.errors` must be empty. Reusable helpers for your own probes are in
+   `_shared/probes/lib.cjs` (`visibleCreature`, `scrubAll`, `shot`). Tap a creature with a
+   real click at `worldToScreen(c.x, c.y)` — and pick one that is ON screen.
+
+4. **Runtime + assertions** — Bash, via the `playtest.cjs` harness:
    ```bash
    # read a state value
    node .claude/skills/_shared/playtest.cjs --eval "state.creatures.length"
@@ -74,3 +84,10 @@ node .claude/skills/_shared/playtest.cjs --engine webkit --device "iPhone 13" --
 ## Chaining
 Before **map-verify** (map visuals) and **release-deploy** (publish).
 Called by the **feedback-session** orchestrator for each item.
+
+## On-screen error bar (red, "tap to dismiss")
+`engine.js` shows uncaught errors from the game's own files with file:line — screenshot
+requests from players are actionable. Opaque errors ("Script error.", no file) and errors
+from other origins/extensions are only logged (Safari extensions, content blockers,
+translation inject them; they don't affect the game). A player report showing a file and
+line = a real engine/config bug → reproduce under WebKit.

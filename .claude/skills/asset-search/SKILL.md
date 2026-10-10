@@ -10,7 +10,9 @@ From a **description** ("a stone fountain", "a grey companion", "a white fence",
 
 ## Flow
 1. **Understand the need**: reframe as keywords (object, colour, style). Stay within
-   the **game's theme and art style** (see `GAME.meta` + `style.css`). Never drift off-theme.
+   the **game's theme and art style** (see `GAME.meta` + `style.css` + the art module in
+   `tools/art/`). Never drift off-theme: external pixel-art next to smooth vector art looks
+   amateur — when nothing matches, **generate** the asset in the art module instead.
 2. **Search** sources allowed by the network policy (test access with
    `curl -s -o /dev/null -w '%{http_code}' <url>` via Bash when unsure):
    - Good starting point: `opengameart.org` (LPC style), `cdn.jsdelivr.net`,

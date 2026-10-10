@@ -5,7 +5,7 @@
 # merge. But the engine layer is a known set of files with NO game content (proven by
 # separation-audit), so we just check those paths out of the game and review.
 #
-# Pulls ONLY: engine.js, ENGINE.md, .claude/skills/ (incl. _shared tooling).
+# Pulls ONLY: engine.js, engine.css, ENGINE.md, .claude/skills/ (incl. _shared tooling).
 # Never touches game content: game.config.js, assets/, index.html, style.css,
 # manifest.webmanifest, README.md, tools/, .claude/settings*.json.
 # Does NOT commit — you review the diff, then commit. Run from the TEMPLATE repo root.
@@ -33,7 +33,7 @@ trap cleanup EXIT
 echo "Fetching $REMOTE ($REF)…"
 git fetch --depth=1 "$REMOTE" "$REF"
 
-PATHS=(engine.js ENGINE.md .claude/skills)
+PATHS=(engine.js engine.css ENGINE.md .claude/skills)
 echo "Pulling engine layer: ${PATHS[*]}"
 git checkout "$REMOTE/$REF" -- "${PATHS[@]}"
 

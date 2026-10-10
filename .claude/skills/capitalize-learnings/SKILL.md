@@ -31,6 +31,7 @@ From the diff just made, list what was actually learned (be concrete):
 | A missing test/visual/check capability | the **shared tooling** in `.claude/skills/_shared/` (e.g. a `playtest.cjs` flag). |
 | A golden-rule nuance / cross-cutting convention | `CLAUDE.md` (§ Conventions). |
 | Game-specific art/copy | the **game** only (`game.config.js`, `tools/…`, assets) — **not** the engine. |
+| **Owner / user feedback on quality** ("ugly", "not pro", "the head floats", "emoji icons") | a rule in **`CLAUDE.md` §9 (quality bar)** **+** a check in **visual-review** (checklist line) or `_shared/art-check.cjs` / `probes/` so the same class of defect is caught automatically next time. |
 
 Prefer **extending** an existing skill over creating a new one. Create a new skill only
 when the procedure is distinct and reusable across games. New skills follow the house
@@ -52,7 +53,9 @@ the config). Exit 0 = clean.
 2. **Docs**: update `ENGINE.md` (schema + the *Capabilities* list) for any new engine
    feature; update `_shared/README.md` for any new tooling; update `CLAUDE.md` skill list
    for any new skill.
-3. **Ship**: hand off to **release-deploy** (bumps `vN`, commits, deploys, verifies).
+3. **Look**: run **visual-review** (art-check + tour screenshots + checklist) whenever art
+   or UI changed — and add any new defect class you discovered to its checklist.
+4. **Ship**: hand off to **release-deploy** (bumps `vN`, commits, deploys, verifies).
 
 ## Guard-rails
 - **Never put game content in `engine.js`.** If the engine truly lacks something, add it as

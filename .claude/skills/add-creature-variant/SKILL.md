@@ -8,7 +8,8 @@ description: Add a new VARIANT (colour/skin) of the creature in a game built on 
 Add a creature variant. Two supported modes — pick one per variant.
 
 ## Code involved (game.config.js)
-- Array **`GAME.creature.variants`**: `{ id, name, color, tint? , sheet? }`.
+- Array **`GAME.creature.variants`**: `{ id, name, color, tint?, sheet?, happySheet?, thumb?,
+  closeupBg?, closeupBgDone?, fixedName? }` (see ENGINE.md).
   - **Tint mode** (simplest): `{ id:"sky", name:"Sky", color:"#6fb7e8", tint:"#6fb7e8" }`.
     The engine recolours the base spritesheet (`GAME.creature.sheet`) with `setTint`.
     `color` = the swatch shown in the customize menu (usually = the tint).
@@ -19,11 +20,15 @@ Add a creature variant. Two supported modes — pick one per variant.
   `assets.sheets` registry. Customization menus iterate over `variants` automatically.
 
 ## Procedure
-1. **Choose mode**: tint (no asset, instant) or dedicated sheet (skill **asset-add**,
-   must match the base frame grid exactly).
+1. **Choose mode**: tint (no asset, instant) or dedicated sheet. **Preferred for quality:**
+   add the variant to the game's art module (`tools/art/<game>.cjs` — the creature is a
+   parametric function: add a colour/palette entry) and re-render with
+   `render-svg.cjs --only <key>`: you get the walk sheet, the customize `thumb`, and the
+   close-up backdrops (`closeupBg` / `closeupBgDone`) consistently from one drawing.
 2. **Add the entry** to `GAME.creature.variants`: unique `id`, friendly `name`,
    `color` swatch, and either `tint` or `sheet`.
-3. **Test**: **test-debug** — the variant appears in 🎨 Style, the creature renders
+3. **Look**: **visual-review** (art-check on the new sheet + full-size look).
+   **Test**: **test-debug** — the variant appears in the Style menu, the creature renders
    with the new look and still animates, no load error.
 4. **Publish**: **release-deploy** (bump `vN` if you added an image).
 

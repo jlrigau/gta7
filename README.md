@@ -1,21 +1,23 @@
 # 🚗 GTA 7 · Neon City
 
-A small **top-down neon-city driving game** (Phaser 3, 100% static, no build). Play as
-**Marco or Nadia**: take **deliveries** (drive to the map marker to get paid), spend your
-cash at the **car dealership** on faster rides, and enter **races** — the view switches to
-a **behind-the-car arcade racing mode** (pseudo-3D road into a neon sunset). Take a **"hot"
-job** for a big payout and the **police** give chase (⭐ wanted level) — outrun them or
-duck into the **garage for a Pay'n'Spray** to shake the heat. Climb the ranks from *Bleu*
-to *Caïd*. Cartoon / arcade tone, no explicit content. **The game itself is in French.**
-For ages **10+**.
+A small **top-down neon-city driving game** (the game itself is in **French**, ages
+**10+**, cartoon/arcade tone, nothing explicit). Play as **Marco or Nadia**: take
+**deliveries** at the Depot (drive to the map marker to get paid), spend your cash at the
+**dealership** on faster cars, and enter **races** — the view switches to a
+**behind-the-car arcade racing mode** (pseudo-3D road into a neon sunset). Take a **"hot"
+job** for a big payout and the **police** give chase (wanted level) — outrun them or get a
+**repaint at the garage** to shake them off. Climb the ranks from *Bleu* to *Caïd*.
 
 ▶ **[Play GTA 7 · Neon City](https://jlrigau.github.io/gta7/)**
 
-This game is built on a small, reusable **2D game engine**: you don't code a game, you
-**describe** it in one config file (`game.config.js`) + assets — or run the **`/new-game`**
-skill. The rest of this README explains how to make your own game on the same engine.
+> GTA 7 is built on a **generic, reusable 2D game engine** (Phaser 3, 100% static, no
+> build). The whole game lives in `game.config.js` + assets (all art generated from
+> `tools/art/neon.cjs`); the city systems — missions, chase, models, race — are generic,
+> config-gated engine features. The rest of this README is that engine's documentation.
 
 ---
+
+# 🎮 The engine behind it
 
 ## 🆕 Create a new game
 
@@ -57,7 +59,7 @@ language (e.g. *“add a pink critter”*, *“let me ride them”*, *“add a s
 
 | Want to add… | Where it lives | Skill |
 | --- | --- | --- |
-| A new colour/skin for the creature | `creature.variants` (a tint — no art needed) | add-creature-variant |
+| A new colour/skin for the creature | `creature.variants` (a tint, or a sheet drawn in `tools/art/`) | add-creature-variant |
 | Rename / restyle creatures | `creature.customize` | — |
 | A shop & coins | `economy` + `shop` (and `meta.showCoins`) | — |
 | Buyable, placeable decorations | `GAME.decor` | add-decor-item |
@@ -66,7 +68,8 @@ language (e.g. *“add a pink critter”*, *“let me ride them”*, *“add a s
 | A scattered forest / trail loop | `GAME.environment` | place-scatter |
 | More goals / levels | `GAME.objectives.levels` | — |
 | Another playable character | `GAME.characters` | add-character |
-| Brand-new art | `assets/` + `GAME.assets` | asset-search → asset-add |
+| Brand-new art | `tools/art/<game>.cjs` → `assets/` (SVG → PNG) | asset-add (or asset-search for external art) |
+| New UI icons | `GAME.icons` (`_shared/icon-kit.cjs`) | — |
 | Theme-specific effects (e.g. stars when playing) | `action.anim` particles | — |
 
 Nothing here ships in the starter on purpose — you switch features on as you need them.
@@ -88,6 +91,8 @@ you want.
 | asset-search · asset-add | Find (with content + license checks) and integrate art. |
 | state-migration | Add a saved field without breaking existing saves. |
 | test-debug · map-verify | Prove a change works / check map placement (headless, with proof). |
+| visual-review | Art + UI QA at full size (anatomy, clipping, icons, short/tall screens) — before every publish. |
+| capitalize-learnings · sync-engine | Fold learnings back into the engine/skills; backport them into the template. |
 | ios-pwa-check | Keep the iPhone/PWA layout clean. |
 | release-deploy | Cache-bust, push to `main`, verify the Pages deploy. |
 
@@ -159,12 +164,12 @@ For example, the demo's creature is described — not coded — like this:
 creature: {
   label: "critters", sheet: "critter", scale: 1.0,
   moodNeed: "joy", moodFrom: ["fuel", "joy"],
-  needs: [ { id: "fuel", icon: "🔋", start: 70, perDay: -22 }, { id: "joy", icon: "😊", start: 80 } ],
+  needs: [ { id: "fuel", icon: "battery", start: 70, perDay: -22 }, { id: "joy", icon: "joy", start: 80 } ],
   actions: [
-    { id: "feed", label: "Feed", icon: "🔋", effects: { fuel: 35, joy: 8 },
-      anim: { motion: "nod", particle: "spark", colors: ["#9fe8ff", "#ffffff"] }, message: "{name} recharged! 🔋" },
-    { id: "play", label: "Play", icon: "🎮", effects: { joy: 22, fuel: -6 },
-      anim: { motion: "hop", particle: "star", colors: ["#fff2a8", "#a8e6ff"] }, message: "{name} had fun! 🎮" },
+    { id: "feed", label: "Feed", icon: "battery", effects: { fuel: 35, joy: 8 },
+      anim: { motion: "nod", particle: "spark", colors: ["#9fe8ff", "#ffffff"] }, message: "{i:battery} {name} recharged!" },
+    { id: "play", label: "Play", icon: "ball", effects: { joy: 22, fuel: -6 },
+      anim: { motion: "hop", particle: "star", colors: ["#fff2a8", "#a8e6ff"] }, message: "{i:ball} {name} had fun!" },
   ],
   names: ["Zib", "Lumi", "Pulse"], startCount: 3,
 },
@@ -172,7 +177,8 @@ creature: {
 
 Handy to know:
 - **Every UI string** has an engine fallback — override only what you want in `meta`.
-  Strings interpolate `{name}`, `{day}`, `{names}`, `{item}`.
+  Strings interpolate `{name}`, `{day}`, `{names}`, `{item}`; `{i:key}` inserts an
+  illustrated icon from `GAME.icons` (never emoji).
 - **Actions** are data: needs they change, a coin reward, a cost, and a **theme-driven
   animation** (`motion` + a particle `shape` + `colors`). Stars, sparks, hearts… are
   chosen here, not hard-coded.
@@ -185,9 +191,10 @@ Handy to know:
 **Everything the engine can do** (all optional, switched on from config): tiled world +
 camera/zoom · walkcycle avatars + create screen · creatures with
 needs/actions/variants/customize/aging/breeding · ride + hop-over obstacles · stations
-(rest/shop) · economy + shop + placeable decor · AABB collisions · arena + trail-loop
-environment · day/night · objectives/levels · theme-driven particle effects ·
-localStorage save · PWA/iOS. **The full field-by-field schema is in
+(rest/shop/menus) · economy + shop + placeable decor · AABB collisions · arena + trail-loop
+environment · day/night · objectives/levels · theme-driven particle effects · close-up
+mini-scene · vehicles (top-down sheets, missions, chase, buyable models, pseudo-3D race) ·
+localStorage save (+ legacy save migration) · PWA/iOS. **The full field-by-field schema is in
 [ENGINE.md](ENGINE.md).**
 
 > **Golden rule:** never put game content in `engine.js`. If the engine truly lacks a
@@ -205,5 +212,5 @@ assets/ (img · sheet · ui · CREDITS.md) · vendor/phaser.min.js
 
 ## 🎨 Credits
 
-Demo textures and icons are **generated** (CC0) and specific to the demo's universe.
-Phaser 3 is MIT. See [`assets/CREDITS.md`](assets/CREDITS.md).
+All art is **generated** (CC0) from `tools/art/neon.cjs`. Phaser 3 is MIT; the Fredoka
+font is OFL. See [`assets/CREDITS.md`](assets/CREDITS.md).

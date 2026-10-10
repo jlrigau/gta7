@@ -40,14 +40,18 @@ the technical work happens **behind the scenes, silently**.
 2. **Classify** yourself: 🐛 **bug** or ✨ **idea**.
 3. **Clarify** only if needed (1 small functional question max).
 4. **Do the work in silence** (no message during this step) by chaining the skills:
-   - ✨ Visual idea (new element) → **asset-search** (with suitability check) →
-     **asset-add** → (**add-decor-item** / **add-creature-variant** / **add-character**
-     / **add-collision** / **place-scatter**) → **test-debug** → **map-verify** →
-     **capitalize-learnings** → **release-deploy**.
+   - ✨ Visual idea (new element) → draw it in the game's art module (`tools/art/`)
+     — or **asset-search** (with suitability check) → **asset-add** if an external asset
+     really fits the style — → (**add-decor-item** / **add-creature-variant** /
+     **add-character** / **add-collision** / **place-scatter**) → **visual-review** →
+     **test-debug** → **map-verify** → **capitalize-learnings** → **release-deploy**.
    - ✨ Rule/feature idea (goals, breeding, …) → code → **state-migration** if it
      saves → **test-debug** → **capitalize-learnings** → **release-deploy**.
-   - 🐛 Bug → **test-debug** (repro + cause + fix + regression) → **map-verify** if
-     visual → **capitalize-learnings** → **release-deploy**.
+   - 🐛 Bug → **test-debug** (repro + cause + fix + regression) → **visual-review** /
+     **map-verify** if visual → **capitalize-learnings** → **release-deploy**.
+   - Feedback about QUALITY ("ugly", "not professional", "looks weird") → treat it as a
+     bug of the checks too: fix the result AND extend **visual-review** so the defect
+     class is caught next time; record the rule in CLAUDE.md §9 (quality bar).
    - In every branch, **capitalize-learnings** runs just before shipping: fold any
      reusable insight back into the engine/skills/docs and audit the separation.
    - **Keep a trail**: create/update a **GitHub issue** (via GitHub MCP) for the

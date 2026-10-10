@@ -11,34 +11,47 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="GTA7" />
   <title>GTA 7 · Neon City</title>
-  <link rel="manifest" href="manifest.webmanifest?v=v4" />
-  <link rel="icon" type="image/png" href="assets/favicon.png?v=v4" />
-  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=v4" />
-  <link rel="stylesheet" href="style.css?v=v4" />
+  <link rel="manifest" href="manifest.webmanifest?v=v5" />
+  <link rel="icon" type="image/png" href="assets/favicon.png?v=v5" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=v5" />
+  <link rel="preload" href="vendor/fonts/fredoka-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="engine.css?v=v5" />
+  <link rel="stylesheet" href="style.css?v=v5" />
 </head>
 <body>
-  <!-- Home -->
+  <!-- Home: full-screen splash + bottom sheet -->
   <div id="screen-home" class="screen">
-    <div class="box-home">
+    <div class="home-bg"></div>
+    <div class="home-hero">
+      <img id="home-logo" class="home-logo hidden" alt="" draggable="false" />
       <h1 id="home-title" class="game-title">Game</h1>
       <p id="home-tagline" class="subtitle"></p>
-      <label id="home-name-label" class="name-label" for="place-name-input">Name your place:</label>
+    </div>
+    <div class="home-sheet">
+      <label id="home-name-label" class="field-label" for="place-name-input">Name your place:</label>
       <input id="place-name-input" type="text" maxlength="20" />
-      <button id="btn-start" class="btn btn-giant">New game</button>
-      <button id="btn-continue" class="btn btn-secondary">Continue</button>
+      <button id="btn-start" class="btn btn-giant btn-primary">New game</button>
+      <button id="btn-continue" class="btn btn-giant btn-secondary">Continue</button>
       <p id="home-msg" class="home-msg"></p>
-      <button id="btn-refresh" class="btn-refresh" title="Clear cache and reload">🔄 Refresh (clear cache)</button>
-      <div id="app-version" class="app-version"></div>
+      <div class="home-foot">
+        <button id="btn-refresh" class="btn-refresh" title="Clear cache and reload">Refresh</button>
+        <span id="app-version" class="app-version"></span>
+      </div>
     </div>
   </div>
 
-  <!-- Character creation -->
+  <!-- Character creation: carousel -->
   <div id="screen-create" class="screen hidden">
-    <div class="box-create">
-      <h2 id="create-title">Choose your character</h2>
+    <div class="home-bg"></div>
+    <h2 id="create-title" class="create-title">Choose your character</h2>
+    <div class="preview-wrap">
+      <button id="car-prev" class="nav-arrow prev" aria-label="previous"></button>
       <div id="avatar-preview" class="avatar-preview"></div>
+      <button id="car-next" class="nav-arrow next" aria-label="next"></button>
+    </div>
+    <div class="home-sheet create-sheet">
       <div id="create-controls" class="create-controls"></div>
-      <button id="btn-create-ok" class="btn btn-giant">Let's go!</button>
+      <button id="btn-create-ok" class="btn btn-giant btn-primary">Let's go!</button>
     </div>
   </div>
 
@@ -46,11 +59,12 @@
   <div id="screen-game" class="screen hidden">
     <header class="top-bar">
       <div class="bar-line">
-        <div class="place-title">🚗 <span id="place-name">My Place</span></div>
+        <div class="place-title"><span id="place-avatar" class="place-avatar"></span><span id="place-name" class="place-name">My place</span></div>
         <div class="hud-actions">
-          <button id="btn-goals" class="mini-btn" title="Goals">🎯</button>
-          <button id="btn-me" class="mini-btn" title="Change my look">🧍</button>
-          <button id="btn-help" class="mini-btn" title="Help">❓</button>
+          <button id="btn-goals" class="mini-btn" title="Goals"></button>
+          <button id="btn-me" class="mini-btn" title="Change my look"></button>
+          <button id="btn-sound" class="mini-btn" title="Sound"></button>
+          <button id="btn-help" class="mini-btn" title="Help"></button>
         </div>
       </div>
       <div id="hud-resources" class="resources"></div>
@@ -71,7 +85,7 @@
   <!-- Modal -->
   <div id="modal" class="modal hidden">
     <div class="modal-content">
-      <button id="btn-close-modal" class="btn-close">✖</button>
+      <button id="btn-close-modal" class="btn-close" aria-label="Close"></button>
       <h2 id="modal-title">Title</h2>
       <div id="modal-body"></div>
     </div>
@@ -79,7 +93,7 @@
 
   <!-- Close-up mini-scene (generic): zoom onto a backdrop and scrub spots off it -->
   <div id="closeup" class="closeup hidden">
-    <button id="closeup-close" class="closeup-close" aria-label="Close">✖</button>
+    <button id="closeup-close" class="closeup-close" aria-label="Close"></button>
     <div id="closeup-stage" class="closeup-stage">
       <img id="closeup-bg" class="closeup-bg" alt="" draggable="false" />
       <img id="closeup-brush" class="closeup-brush hidden" alt="" draggable="false" />
@@ -89,8 +103,8 @@
   <!-- Night veil ("rest" transition), fullscreen -->
   <div id="night-veil"></div>
 
-  <script src="vendor/phaser.min.js?v=v4"></script>
-  <script src="game.config.js?v=v4"></script>
-  <script src="engine.js?v=v4"></script>
+  <script src="vendor/phaser.min.js?v=v5"></script>
+  <script src="game.config.js?v=v5"></script>
+  <script src="engine.js?v=v5"></script>
 </body>
 </html>

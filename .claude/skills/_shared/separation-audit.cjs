@@ -44,5 +44,13 @@ console.log("\n== 3. index.html <body> — game-specific text (shell body should
   else console.log("  none ✓");
 }
 
+// 4. engine.css — the shared structure stylesheet must stay theme-free (no game text).
+console.log("\n== 4. engine.css — game-specific text (structure only; the theme lives in style.css) ==");
+{
+  const hits = lines(read("engine.css")).map((l, i) => [i + 1, l]).filter(([, l]) => ACCENT.test(l));
+  if (hits.length) { hits.forEach(([n, l]) => console.log(`  ${n}: ${l.trim().slice(0, 100)}`)); fail = 1; }
+  else console.log("  none ✓");
+}
+
 console.log("\n" + (fail ? "SEPARATION AUDIT: review the items above ✗" : "SEPARATION AUDIT: clean ✓"));
 process.exit(fail);
