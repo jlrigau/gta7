@@ -591,6 +591,47 @@ function garage() {
   g += `<g transform="rotate(-14 ${x0 + w * 0.78} ${top - 30})">${sprayCan(x0 + w * 0.78, top - 34, 0.95, 3.4, CYAN)}</g>`;
   return job("assets/img/garage.png", W, H, g, defs);
 }
+// "La Planque" (safehouse, where you sleep): a discreet two-storey walk-up — half-closed
+// blinds, one warm lit window, a steel door with a peephole, a neon moon + "Zz" sign, a fire
+// escape and a satellite dish. Ground y 206.
+function safehouse() {
+  const u = "sh", W = 280, H = 240, A = VIOLET, x0 = 30, w = 190, d = 30, dy = 20, top = 70, base = 226;
+  let defs = bdefs(u, "#3d3470", A) + rad(`${u}w`, [[0, "#fff1c4", 0.95], [1, "#ffb86a", 0.6]]) + lin(`${u}dr`, [[0, "#5a5f8c"], [1, "#363a66"]]);
+  let g = groundShadow(x0, w, d, base, `${u}b`);
+  g += box3(x0, top, w, base, d, dy, BC(u));
+  // floor band between storeys
+  g += `<path d="M${x0} ${top + 74} H${x0 + w}" stroke="${INK}" stroke-width="3"/><path d="M${x0 + 2} ${top + 77} H${x0 + w - 2}" stroke="#ffffff" stroke-width="1.5" opacity=".18"/>`;
+  // windows: upper floor (one warm & lit with a lamp, others with blinds), ground floor small
+  const win = (x, y, ww, hh, lit) => {
+    let t = `<rect x="${x}" y="${y}" width="${ww}" height="${hh}" rx="3" fill="${lit ? `url(#${u}w)` : "#1e1a44"}" ${stk(2.6)}/>`;
+    const n = lit ? 2 : 4;
+    for (let i = 1; i <= n; i++) t += `<path d="M${x + 2} ${y + i * (hh / (n + 1.6))} H${x + ww - 2}" stroke="${lit ? "#d98c4a" : "#4b4685"}" stroke-width="2.4" opacity="${lit ? 0.6 : 1}"/>`;
+    if (lit) t += `<path d="M${x + ww - 12} ${y + hh - 4} V${y + hh - 16} M${x + ww - 17} ${y + hh - 16} H${x + ww - 7} L${x + ww - 9} ${y + hh - 22} H${x + ww - 15} Z" stroke="${INK}" stroke-width="1.6" fill="#ffd98a"/>`;
+    return t;
+  };
+  g += win(x0 + 18, top + 22, 40, 36, false) + win(x0 + 76, top + 22, 40, 36, true) + win(x0 + 134, top + 22, 40, 36, false);
+  g += win(x0 + 18, top + 98, 34, 30, false);
+  // steel door with peephole + doormat, under a little awning
+  const dx = x0 + 96, dw = 40, dtop = top + 92;
+  g += `<rect x="${dx}" y="${dtop}" width="${dw}" height="${base - dtop - 2}" rx="3" fill="url(#${u}dr)" ${stk(2.8)}/>`;
+  g += `<circle cx="${dx + dw / 2}" cy="${dtop + 18}" r="3.4" fill="#ffd98a" ${stk(1.6)}/><circle cx="${dx + dw - 8}" cy="${dtop + 52}" r="2.6" fill="#c9cde2" ${stk(1.4)}/>`;
+  g += `<path d="M${dx - 8} ${dtop - 4} H${dx + dw + 8} L${dx + dw + 2} ${dtop - 16} H${dx - 2} Z" fill="${A}" ${stk(2.6)}/>`;
+  g += `<rect x="${dx - 4}" y="${base - 4}" width="${dw + 8}" height="6" rx="3" fill="#7a3b6e" ${stk(2)}/>`;
+  // fire escape on the right of the front
+  const fx = x0 + 150;
+  g += `<path d="M${fx} ${top + 68} H${fx + 34} M${fx} ${top + 140} H${fx + 34}" stroke="#2a2d55" stroke-width="4"/>`;
+  for (let x = fx + 4; x <= fx + 30; x += 6.5) g += `<path d="M${x} ${top + 60} V${top + 68} M${x} ${top + 132} V${top + 140}" stroke="#2a2d55" stroke-width="2"/>`;
+  g += `<path d="M${fx + 6} ${top + 70} L${fx + 28} ${top + 138}" stroke="#2a2d55" stroke-width="3.2"/>`;
+  // neon sign on the roof edge: crescent moon + Zz
+  g += `<rect x="${x0 + 40}" y="${top - 38}" width="92" height="34" rx="8" fill="#17123a" ${stk(3)}/><path d="M${x0 + 64} ${top - 4} V${top}" stroke="${INK}" stroke-width="3"/><path d="M${x0 + 108} ${top - 4} V${top}" stroke="${INK}" stroke-width="3"/>`;
+  g += neon(`M${x0 + 66} ${top - 32} A12 12 0 1 0 ${x0 + 70} ${top - 10} A9 9 0 1 1 ${x0 + 66} ${top - 32} Z`, YELLOW, 2.6, `${u}n`);
+  g += neon(`M${x0 + 86} ${top - 30} H${x0 + 98} L${x0 + 86} ${top - 18} H${x0 + 98} M${x0 + 104} ${top - 24} H${x0 + 112} L${x0 + 104} ${top - 14} H${x0 + 112}`, A, 2.6, `${u}n`);
+  // satellite dish on the roof
+  g += `<g transform="rotate(-25 ${x0 + w - 26} ${top - 12})"><path d="M${x0 + w - 42} ${top - 14} A16 9 0 0 0 ${x0 + w - 10} ${top - 14} Z" fill="#c9cde2" ${stk(2.6)}/><path d="M${x0 + w - 26} ${top - 14} V${top - 4}" stroke="${INK}" stroke-width="3"/></g>`;
+  g += box3Lines(x0, top, w, base, d, dy);
+  g += neon(`M${x0 + 5} ${top + 3} H${x0 + w - 5}`, A, 2.2, `${u}n`);
+  return job("assets/img/safehouse.png", W, H, g, defs);
+}
 // Gas station: canopy on pillars, two pumps, price totem. Ground y 204.
 function pump(cx, base, c, s, sw) {
   s = s || 1; sw = sw || 3;
@@ -1066,7 +1107,7 @@ function build() {
   jobs.push(
     towerJob("assets/img/tower_cyan.png", 240, 340, { u: "tc", x0: 24, w: 160, d: 30, dy: 22, top: 104, base: 326, wall: "#3b3577", accent: CYAN, cols: 4, rows: 7, glyph: "bolt", seed: 3 }),
     towerJob("assets/img/tower_pink.png", 240, 340, { u: "tp", x0: 30, w: 150, d: 28, dy: 20, top: 110, base: 326, wall: "#4a2f6e", accent: PINK, win: "strips", cols: 4, rows: 9, glyph: "moon", glyph2: "star", accent2: CYAN, seed: 8, antenna: 0 }),
-    dealer(), garage(), gas(), depot(), shopBlock(),
+    dealer(), garage(), safehouse(), gas(), depot(), shopBlock(),
     palm(), streetlamp(), hydrant(), ramp(), bench(), planter(), billboard(),
     towerJob("assets/img/bldg_a.png", 180, 300, { u: "ba", x0: 14, w: 152, d: 0, dy: 0, top: 84, base: 286, wall: "#33407a", accent: CYAN, cols: 4, rows: 8, glyph: "ring", glyph2: "wave", signY: 40, seed: 12 }),
     towerJob("assets/img/bldg_b.png", 200, 260, { u: "bb", x0: 14, w: 172, d: 0, dy: 0, top: 84, base: 246, wall: "#4a2f6e", accent: PINK, win: "strips", cols: 5, rows: 6, glyph: "star", glyph2: "wave", accent2: CYAN, signY: 40, seed: 15 }),

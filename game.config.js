@@ -11,7 +11,7 @@
    jumps = ride jump); take deliveries at the Depot (missions),
    shake off the cops on "hot" jobs (chase), race in a pseudo-3D
    behind-the-car view (race), buy faster cars at the dealership
-   (models) and repaint at the garage (station menu → restyle).
+   (models), repaint your car at the garage (by car) and sleep at La Planque.
 
    All art is generated from tools/art/neon.cjs (SVG → WebP, CC0).
    ========================================================= */
@@ -27,7 +27,7 @@ window.GAME = {
     tagline: "Roule, livre, fais la course… et sème la police !",
     saveKey: "gta7-neon-city",
     audience: { minAge: 10, notes: "arcade/cartoon action, top-down driving, mild — no weapons, no gore, no blood, no explicit content" },
-    assetVersion: "v10",
+    assetVersion: "v11",
     theme: { home: "#160f28", play: "#141024", closeup: "#141024" },
 
     showCoins: true,
@@ -129,7 +129,7 @@ window.GAME = {
       crosswalk: { path: "assets/img/crosswalk.webp", res: 2 }, grass: { path: "assets/img/grass.webp", res: 2 },
       lane: { path: "assets/img/lane.webp", res: 2 }, lane_v: { path: "assets/img/lane_v.webp", res: 2 },
       tower_cyan: { path: "assets/img/tower_cyan.webp", res: 2 }, tower_pink: { path: "assets/img/tower_pink.webp", res: 2 },
-      dealer: { path: "assets/img/dealer.webp", res: 2 }, garage: { path: "assets/img/garage.webp", res: 2 },
+      dealer: { path: "assets/img/dealer.webp", res: 2 }, garage: { path: "assets/img/garage.webp", res: 2 }, safehouse: { path: "assets/img/safehouse.webp", res: 2 },
       gas: { path: "assets/img/gas.webp", res: 2 }, depot: { path: "assets/img/depot.webp", res: 2 }, shop_block: { path: "assets/img/shop_block.webp", res: 2 },
       palm: { path: "assets/img/palm.webp", res: 2 }, streetlamp: { path: "assets/img/streetlamp.webp", res: 2 }, hydrant: { path: "assets/img/hydrant.webp", res: 2 },
       ramp: { path: "assets/img/ramp.webp", res: 2 }, bench: { path: "assets/img/bench.webp", res: 2 }, planter: { path: "assets/img/planter.webp", res: 2 },
@@ -240,17 +240,17 @@ window.GAME = {
 
   /* ---- Buildings ---- */
   stations: [
+    // Pay'n'Spray: repaint the car you are DRIVING (also loses the cops) — you must come by car
     { type: "garage", x: 1200, y: 930, sprite: "garage", scale: 0.85, label: "Garage", labelY: 34, icon: "garage", color: "#ff4d97",
-      hint: "Peinture et repos", box: { dx: -110, dy: -70, w: 220, h: 64 },
-      action: "menu", actionLabel: "Entrer au garage",
-      menu: { title: "{i:garage} Garage", subtitle: "Que veux-tu faire ?",
-        items: [
-          { label: "Repeindre ta voiture", sub: "Nouvelle couleur — et la police perd ta trace !", icon: "palette", price: 20, do: "restyle", highlight: "chase",
-            title: "{i:palette} Atelier peinture", subtitle: "Choisis une couleur pour {name} :", clearsChase: true,
-            message: "{i:palette} {name} est repeinte en {v} !", chaseMessage: "{i:palette} Repeinte en {v} — les flics perdent ta trace !",
-            noneMessage: "Tu n'as pas encore de voiture." },
-          { label: "Dormir", sub: "Passer au jour suivant", icon: "bed", do: "nextDay" },
-        ] } },
+      hint: "Repeins la voiture que tu conduis", box: { dx: -110, dy: -70, w: 220, h: 64 },
+      requireMounted: true, needMountMessage: "{i:car} Viens en voiture pour la faire repeindre !",
+      action: "restyle", actionLabel: "Repeindre la voiture (20)",
+      restyle: { price: 20, clearsChase: true, title: "{i:palette} Atelier peinture", subtitle: "Choisis une couleur pour {name} :",
+                 message: "{i:palette} {name} est repeinte en {v} !", chaseMessage: "{i:palette} Repeinte en {v} — les flics perdent ta trace !" } },
+    // La Planque (safehouse): where you sleep — on foot or by car
+    { type: "planque", x: 1980, y: 1490, sprite: "safehouse", scale: 1.05, label: "La Planque", labelY: 34, icon: "bed", color: "#9a6bff",
+      hint: "Dormir jusqu'au lendemain", box: { dx: -126, dy: -104, w: 284, h: 98 }, whileRiding: true,
+      action: "nextDay", actionLabel: "Dormir" },
     { type: "gas", x: 350, y: 880, sprite: "gas", scale: 0.85, label: "Station-service", labelY: 34, icon: "fuel", color: "#ffcf3f",
       hint: "Le plein pour la voiture que tu conduis", box: { dx: -110, dy: -60, w: 220, h: 56 },
       requireMounted: true, needMountMessage: "{i:car} Viens en voiture pour faire le plein !",
@@ -323,7 +323,6 @@ window.GAME = {
     { x: 420, y: 560, sprite: "tower_cyan", scale: 0.9, box: { dx: -96, dy: -120, w: 192, h: 120 } },
     { x: 1980, y: 560, sprite: "tower_pink", scale: 0.9, box: { dx: -96, dy: -120, w: 192, h: 120 } },
     { x: 420, y: 1490, sprite: "shop_block", scale: 0.95, box: { dx: -120, dy: -90, w: 240, h: 90 } },
-    { x: 1980, y: 1470, sprite: "tower_cyan", scale: 0.85, box: { dx: -92, dy: -116, w: 184, h: 116 } },
     { x: 1010, y: 640, sprite: "palm", scale: 0.8, anim: "sway", box: { dx: -12, dy: -14, w: 24, h: 16 } },
     { x: 1410, y: 640, sprite: "palm", scale: 0.8, anim: "sway", box: { dx: -12, dy: -14, w: 24, h: 16 } },
     { x: 1200, y: 760, sprite: "billboard", scale: 0.8, box: { dx: -60, dy: -14, w: 120, h: 18 } },
@@ -379,7 +378,8 @@ window.GAME = {
     "<b>Bienvenue à Neon City !</b> Roule, livre, fais la course… et gère la police.",
     "{i:hand} <b>Se déplacer :</b> touche où aller (touche deux fois vite pour courir). {i:car} <b>Conduire :</b> touche une voiture puis « Conduire ».",
     "{i:parcel} <b>Livraisons (Dépôt) :</b> suis la flèche jusqu'au <b>colis</b>, récupère-le, puis emmène-le jusqu'à la <b>cible</b> au sol pour être payé.",
-    "{i:wanted} <b>Cargaisons sensibles :</b> elles paient gros mais la police te prend en chasse. Sème-la en roulant vite, ou repeins ta voiture au {i:garage} <b>Garage</b>.",
+    "{i:wanted} <b>Cargaisons sensibles :</b> elles paient gros mais la police te prend en chasse. Sème-la en roulant vite, ou va repeindre ta voiture au {i:garage} <b>Garage</b> (en voiture).",
+    "{i:bed} <b>La Planque :</b> c'est là que tu dors pour passer au jour suivant, à pied ou en voiture.",
     "{i:flag} <b>Course :</b> au volant, « Course » : vue derrière la voiture. Touche à gauche ou à droite pour tourner, évite les plots et rejoins l'arrivée avant le chrono.",
     "{i:dealer} <b>Concession :</b> achète des voitures plus rapides ({i:speed} vitesse, {i:grip} tenue, {i:range} autonomie).",
     "{i:fuel} <b>Essence :</b> elle baisse en roulant (et pendant les courses). Panne sèche : la voiture roule au ralenti, alors file au volant jusqu'à la <b>station-service</b> pour faire le plein. {i:stunt} <b>Cascade :</b> saute par-dessus une rampe pour un bonus.",
