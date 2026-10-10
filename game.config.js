@@ -27,7 +27,7 @@ window.GAME = {
     tagline: "Roule, livre, fais la course… et sème la police !",
     saveKey: "gta7-neon-city",
     audience: { minAge: 10, notes: "arcade/cartoon action, top-down driving, mild — no weapons, no gore, no blood, no explicit content" },
-    assetVersion: "v6",
+    assetVersion: "v7",
     theme: { home: "#160f28", play: "#141024", closeup: "#141024" },
 
     showCoins: true,
