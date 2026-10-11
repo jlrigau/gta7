@@ -140,12 +140,12 @@ window.GAME = {
       car_back: { path: "assets/img/car_back.webp", res: 2 }, cone: { path: "assets/img/cone.webp", res: 2 },
       bldg_a: { path: "assets/img/bldg_a.webp", res: 2 }, bldg_b: { path: "assets/img/bldg_b.webp", res: 2 },
       // car-wash close-up (hood seen from the front; "_done" = shiny) + mud splats + sponge
-      wash_silver: { path: "assets/img/wash_silver.webp", res: 2 }, wash_silver_done: { path: "assets/img/wash_silver_done.webp", res: 2 },
-      wash_red: { path: "assets/img/wash_red.webp", res: 2 }, wash_red_done: { path: "assets/img/wash_red_done.webp", res: 2 },
-      wash_blue: { path: "assets/img/wash_blue.webp", res: 2 }, wash_blue_done: { path: "assets/img/wash_blue_done.webp", res: 2 },
-      wash_yellow: { path: "assets/img/wash_yellow.webp", res: 2 }, wash_yellow_done: { path: "assets/img/wash_yellow_done.webp", res: 2 },
-      wash_green: { path: "assets/img/wash_green.webp", res: 2 }, wash_green_done: { path: "assets/img/wash_green_done.webp", res: 2 },
-      wash_purple: { path: "assets/img/wash_purple.webp", res: 2 }, wash_purple_done: { path: "assets/img/wash_purple_done.webp", res: 2 },
+      wash_silver: { path: "assets/img/wash_silver.webp", res: 2 }, wash_silver_done: { path: "assets/img/wash_silver_done.webp", res: 2 }, wash_silver_wide: { path: "assets/img/wash_silver_wide.webp", res: 2 }, wash_silver_wide_done: { path: "assets/img/wash_silver_wide_done.webp", res: 2 },
+      wash_red: { path: "assets/img/wash_red.webp", res: 2 }, wash_red_done: { path: "assets/img/wash_red_done.webp", res: 2 }, wash_red_wide: { path: "assets/img/wash_red_wide.webp", res: 2 }, wash_red_wide_done: { path: "assets/img/wash_red_wide_done.webp", res: 2 },
+      wash_blue: { path: "assets/img/wash_blue.webp", res: 2 }, wash_blue_done: { path: "assets/img/wash_blue_done.webp", res: 2 }, wash_blue_wide: { path: "assets/img/wash_blue_wide.webp", res: 2 }, wash_blue_wide_done: { path: "assets/img/wash_blue_wide_done.webp", res: 2 },
+      wash_yellow: { path: "assets/img/wash_yellow.webp", res: 2 }, wash_yellow_done: { path: "assets/img/wash_yellow_done.webp", res: 2 }, wash_yellow_wide: { path: "assets/img/wash_yellow_wide.webp", res: 2 }, wash_yellow_wide_done: { path: "assets/img/wash_yellow_wide_done.webp", res: 2 },
+      wash_green: { path: "assets/img/wash_green.webp", res: 2 }, wash_green_done: { path: "assets/img/wash_green_done.webp", res: 2 }, wash_green_wide: { path: "assets/img/wash_green_wide.webp", res: 2 }, wash_green_wide_done: { path: "assets/img/wash_green_wide_done.webp", res: 2 },
+      wash_purple: { path: "assets/img/wash_purple.webp", res: 2 }, wash_purple_done: { path: "assets/img/wash_purple_done.webp", res: 2 }, wash_purple_wide: { path: "assets/img/wash_purple_wide.webp", res: 2 }, wash_purple_wide_done: { path: "assets/img/wash_purple_wide_done.webp", res: 2 },
       mud_a: "assets/img/mud_a.webp", mud_b: "assets/img/mud_b.webp", mud_c: "assets/img/mud_c.webp", sponge: "assets/img/sponge.webp",
     },
     sheets: {
@@ -191,12 +191,12 @@ window.GAME = {
     // low-fuel warning bubble
     wantBubble: { sprite: "want_gas", need: "fuel", below: 30, intermittent: true, scale: 0.55, lift: 18, showFor: 2.4, hideMin: 5, hideMax: 11 },
     variants: [
-      { id: "silver", name: "Argent", color: "#dcdce4" , closeupBg: "wash_silver", closeupBgDone: "wash_silver_done" },
-      { id: "red", name: "Rouge", color: "#e24a4a", tint: "#ff5a5a" , closeupBg: "wash_red", closeupBgDone: "wash_red_done" },
-      { id: "blue", name: "Bleue", color: "#4a96f0", tint: "#5aa6ff" , closeupBg: "wash_blue", closeupBgDone: "wash_blue_done" },
-      { id: "yellow", name: "Jaune", color: "#facd46", tint: "#ffd84a" , closeupBg: "wash_yellow", closeupBgDone: "wash_yellow_done" },
-      { id: "green", name: "Verte", color: "#5ac878", tint: "#6ad888" , closeupBg: "wash_green", closeupBgDone: "wash_green_done" },
-      { id: "purple", name: "Violette", color: "#b06cf0", tint: "#c07cff" , closeupBg: "wash_purple", closeupBgDone: "wash_purple_done" },
+      { id: "silver", name: "Argent", color: "#dcdce4" , closeupBg: "wash_silver", closeupBgDone: "wash_silver_done", closeupBgWide: "wash_silver_wide", closeupBgWideDone: "wash_silver_wide_done" },
+      { id: "red", name: "Rouge", color: "#e24a4a", tint: "#ff5a5a" , closeupBg: "wash_red", closeupBgDone: "wash_red_done", closeupBgWide: "wash_red_wide", closeupBgWideDone: "wash_red_wide_done" },
+      { id: "blue", name: "Bleue", color: "#4a96f0", tint: "#5aa6ff" , closeupBg: "wash_blue", closeupBgDone: "wash_blue_done", closeupBgWide: "wash_blue_wide", closeupBgWideDone: "wash_blue_wide_done" },
+      { id: "yellow", name: "Jaune", color: "#facd46", tint: "#ffd84a" , closeupBg: "wash_yellow", closeupBgDone: "wash_yellow_done", closeupBgWide: "wash_yellow_wide", closeupBgWideDone: "wash_yellow_wide_done" },
+      { id: "green", name: "Verte", color: "#5ac878", tint: "#6ad888" , closeupBg: "wash_green", closeupBgDone: "wash_green_done", closeupBgWide: "wash_green_wide", closeupBgWideDone: "wash_green_wide_done" },
+      { id: "purple", name: "Violette", color: "#b06cf0", tint: "#c07cff" , closeupBg: "wash_purple", closeupBgDone: "wash_purple_done", closeupBgWide: "wash_purple_wide", closeupBgWideDone: "wash_purple_wide_done" },
     ],
     actions: [
       { id: "drive", type: "ride", label: "Conduire", icon: "car", color: "#38e0e6", dismountLabel: "Descendre", dismountIcon: "close" },
@@ -207,8 +207,11 @@ window.GAME = {
         closeup: {
           bg: "wash_silver", spotSprites: ["mud_a", "mud_b", "mud_c"], brush: "sponge", brushTip: { x: 0.363, y: 0.794 },
           spots: { base: 4, growEvery: 2, max: 9, rubs: 3, size: 150, minGap: 0.08,
-                   // left & right halves of the painted hood (between the panel edges and the stripes)
-                   area: [{ x: 0.294, y: 0.369, w: 0.137, h: 0.269 }, { x: 0.569, y: 0.369, w: 0.137, h: 0.269 }] },
+                   // the hood top, then the side panel (washAreas() in tools/art/neon.cjs)
+                   area: [{ x: 0.487, y: 0.421, w: 0.303, h: 0.038 }, { x: 0.47, y: 0.535, w: 0.208, h: 0.03 }] },
+          // phone held sideways: the whole car in 3/4 view (same areas order: hood, side — washAreas() in neon.cjs)
+          wide: { bg: "wash_silver_wide", bgDone: "wash_silver_wide_done",
+                  area: [{ x: 0.748, y: 0.463, w: 0.142, h: 0.046 }, { x: 0.355, y: 0.621, w: 0.259, h: 0.153 }] },
           finishParticles: ["sparkle", "star"],
           foam: { colors: ["#ffffff", "#e3f9ff", "#c8f4ff"] },
         },
