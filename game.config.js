@@ -207,11 +207,13 @@ window.GAME = {
         closeup: {
           bg: "wash_silver", spotSprites: ["mud_a", "mud_b", "mud_c"], brush: "sponge", brushTip: { x: 0.363, y: 0.794 },
           spots: { base: 4, growEvery: 2, max: 9, rubs: 3, size: 150, minGap: 0.08,
-                   // the hood top, then the side panel (washAreas() in tools/art/neon.cjs)
-                   area: [{ x: 0.272, y: 0.507, w: 0.193, h: 0.093 }, { x: 0.659, y: 0.59, w: 0.141, h: 0.059 }] },
+                   // the hood top, then the door panel, as perspective QUADS (washAreas() quads in tools/art/neon.cjs)
+                   area: [{ quad: [[0.566, 0.557], [0.389, 0.642], [0.193, 0.529], [0.366, 0.452]], margin: 0.18 },
+                         { quad: [[0.771, 0.577], [0.658, 0.625], [0.659, 0.579], [0.773, 0.531]], margin: 0.12 }] },   // door cut at the phone crop
           // phone held sideways: the whole car in 3/4 view (same areas order: hood, side — washAreas() in neon.cjs)
           wide: { bg: "wash_silver_wide", bgDone: "wash_silver_wide_done",
-                  area: [{ x: 0.332, y: 0.533, w: 0.143, h: 0.091 }, { x: 0.565, y: 0.628, w: 0.144, h: 0.042 }] },
+                  area: [{ quad: [[0.405, 0.571], [0.261, 0.657], [0.192, 0.471], [0.327, 0.394]], margin: 0.18 },
+                         { quad: [[0.657, 0.633], [0.466, 0.724], [0.466, 0.633], [0.659, 0.543]], margin: 0.15 }] },
           finishParticles: ["sparkle", "star"],
           foam: { colors: ["#ffffff", "#e3f9ff", "#c8f4ff"] },
         },
@@ -246,11 +248,29 @@ window.GAME = {
     track: { segments: 1100, speed: 1.0, steer: 2.6, centrifugal: 0.65 },
     obstacles: [
       { sprite: "cone", every: 30, phase: 0, scale: 2.4, hw: 0.2, spread: 0.6 },
-      { sprite: "car_back", every: 52, phase: 22, scale: 6.5, hw: 0.36, spread: 0.42 },
     ],
-    colors: { sky: ["#241a4d", "#5b2a6e", "#e0566e"], sun: ["#ffd36a", "#ff5d7a"], skyline: "#2a1c4a", ground: "#1d1838",
+    // a REAL race: 5 rival cars to overtake (you start last), ranking, results with a reward per place
+    horizon: 0.42,                           // tall phones: more road, less empty sky
+    rivals: {
+      list: [
+        { name: "Vipère", sprite: "car_back", tint: "#5aa6ff", color: "#5aa6ff" },
+        { name: "Banshee", sprite: "car_back", tint: "#ffd84a", color: "#ffd84a" },
+        { name: "Tornade", sprite: "car_back", tint: "#6ad888", color: "#6ad888" },
+        { name: "Panthère", sprite: "car_back", tint: "#c07cff", color: "#c07cff" },
+        { name: "Fusée", sprite: "car_back", tint: "#ff8a3d", color: "#ff8a3d" },
+      ],
+      scale: 6.5, hw: 0.34, skill: [0.82, 0.97], gridGap: 5, gridFirst: 4, lanes: [-0.62, 0.62],
+      rewards: [110, 70, 45, 25, 15, 10],
+      placeLabels: ["1er", "2e", "3e", "4e", "5e", "6e"],
+      placeMessages: ["{i:trophy} Victoire ! Tu as battu tout le monde !", "{i:star} 2e ! Pas loin de la victoire !", "{i:star} 3e : tu montes sur le podium !", "Tu finis {place}. Double plus de voitures la prochaine fois !"],
+      resultsTitle: "{i:flag} Résultats",
+      startMessage: "{i:flag} Double les 5 voitures et passe la ligne en premier !",
+      bumpMessage: "Tu as percuté {name} !",
+      goLabel: "Partez !",
+    },
+    colors: { sky: ["#241a4d", "#5b2a6e", "#e0566e"], sun: ["#ffd36a", "#ff5d7a"], sunPos: { x: 0.78, y: 0.55, r: 0.07 }, skyline: "#2a1c4a", ground: "#1d1838",
               grass: ["#262046", "#211b3e"], road: ["#3b404c", "#33373f"], rumble: ["#eef2f7", "#ff4d97"], lane: "#e7ecf2", finish: ["#e9edf2", "#1a1330"] },
-    icons: { time: "timer", distance: "distance", speed: "speed", quit: "quit", left: "left", right: "right" },
+    icons: { time: "timer", distance: "distance", speed: "speed", quit: "quit", left: "left", right: "right", place: "flag" },
     quitLabel: "Quitter",
     hint: "Touche à gauche ou à droite pour tourner",
     startMessage: "{i:flag} 3… 2… 1… Partez ! Rejoins l'arrivée avant la fin du chrono !",
@@ -378,7 +398,7 @@ window.GAME = {
       { name: "Bleu", goals: [
         { id: "drive1", name: "Première virée", desc: "Monte dans une voiture {i:car}", check: (s) => (s.stats.ride || 0) >= 1 },
         { id: "job1", name: "Premier colis", desc: "Réussis une livraison {i:parcel}", check: (s) => (s.stats.jobs || 0) >= 1 },
-        { id: "race1", name: "Baptême du feu", desc: "Gagne une course {i:flag}", check: (s) => (s.stats.raceWin || 0) >= 1 },
+        { id: "race1", name: "Baptême du feu", desc: "Monte sur le podium d'une course {i:flag}", check: (s) => (s.stats.racePodium || 0) >= 1 || (s.stats.raceWin || 0) >= 1 },
       ] },
       { name: "Chauffeur", goals: [
         { id: "job5", name: "Livreur", desc: "Fais 5 livraisons {i:parcel}", check: (s) => (s.stats.jobs || 0) >= 5 },
@@ -406,7 +426,7 @@ window.GAME = {
     "{i:parcel} <b>Livraisons (Dépôt) :</b> suis la flèche jusqu'au <b>colis</b>, récupère-le, puis emmène-le jusqu'à la <b>cible</b> au sol pour être payé.",
     "{i:wanted} <b>Cargaisons sensibles :</b> elles paient gros mais la police te prend en chasse. Sème-la en roulant vite, ou va repeindre ta voiture au {i:garage} <b>Garage</b> (en voiture).",
     "{i:bed} <b>La Planque :</b> c'est là que tu dors pour passer au jour suivant, à pied ou en voiture.",
-    "{i:flag} <b>Course :</b> au volant, « Course » : vue derrière la voiture. Touche à gauche ou à droite pour tourner, évite les plots et rejoins l'arrivée avant le chrono.",
+    "{i:flag} <b>Course :</b> au volant, « Course » : vue derrière la voiture. Tu pars dernier derrière 5 voitures : touche à gauche ou à droite pour les doubler et éviter les plots. Plus tu finis haut, plus tu gagnes !",
     "{i:dealer} <b>Concession :</b> achète des voitures plus rapides ({i:speed} vitesse, {i:grip} tenue, {i:range} autonomie).",
     "{i:fuel} <b>Essence :</b> elle baisse en roulant (et pendant les courses). Panne sèche : la voiture roule au ralenti, alors file au volant jusqu'à la <b>station-service</b> pour faire le plein. {i:stunt} <b>Cascade :</b> saute par-dessus une rampe pour un bonus.",
     "{i:wash} <b>Lavage :</b> une voiture se salit de jour en jour ({i:clean} Propreté). Touche-la à pied puis « Laver » : frotte la boue sur le capot avec l'éponge.",
