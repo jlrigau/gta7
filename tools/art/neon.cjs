@@ -1121,42 +1121,206 @@ function splash() {
 /* ============================ CAR WASH CLOSE-UP ============================ */
 // Hand-wash scene, two backdrops per car colour:
 //   wash_<v>[_done]       900×1300 PORTRAIT (cover-fit: a 390×844 phone shows x ≈ 0.17–0.83):
-//                         zoom on the FRONT half of the car
+//                         the hood + front fender + front wheel + start of the doors
 //   wash_<v>_wide[_done]  1600×900 LANDSCAPE: the whole car
-// Both use car3q(): carSide() extruded up-right by (D, -dy) — a slightly elevated 3/4 front-side
-// view, so the hood TOP and the side are both visible. A girl in a modest sporty swimsuit + board
-// shorts (washGirl(), Nadia's face/hair + a cap) washes it with a hose; _done = shiny + thumbs-up.
+// carP(): the game's car as a 3D rounded-box cartoon (lower body = rounded-rect prism, cabin =
+// lofted frustum, wheels = projected discs) seen in a real perspective 3/4 FRONT view: turned
+// ~38° toward the viewer, camera ~24° above — nose + big hood in the foreground (lower-left),
+// near side receding to the upper-right, rolling out of a neon garage. The girl (washGirl(), a
+// modest sporty swimsuit + board shorts) stands BEHIND the car, spraying over it with a hose;
+// _done = shiny paint + sparkles + thumbs-up.
 const WASH_COLORS = {   // body (config variant colour) + the neon stripe that reads on it
   silver: ["#dcdce4", CYAN], red: ["#e24a4a", YELLOW], blue: ["#4a96f0", YELLOW],
   yellow: ["#facd46", PINK], green: ["#5ac878", PINK], purple: ["#b06cf0", CYAN],
 };
-const C3 = { D: 12, dy: 30, hk: 1.15, wk: 1.1 };                 // extrusion (drawn units) + chunkiness
-const c3Y = (y) => 98 - (98 - y) * C3.hk;                         // design y → drawn y (as carSide)
-const WASH_LAYOUT = {   // car placement: image = (tx + x·s, ty + y·s); ground = tyre bottom
-  portrait: { W: 900, H: 1300, s: 5.5, ground: 1060, nose: 0.8 },
-  wide: { W: 1600, H: 900, s: 4.6, ground: 845, left: 90 },
+// car space: x = length (nose +150, tail −150), y = up (ground 0, sill 14, belt 62, roof 106),
+// z = width (near side −62, far side +62).
+const CARP = { hl: 150, hw: 62, rc: 36, sill: 14, belt: 62, roof: 106, axle: 26, wr: 25, wellR: 29, wx: 85,
+  cabBase: [-100, 40, 50, 22], cabTop: [-78, -4, 42, 20], hood: [46, 150],
+  yaw: 142 * Math.PI / 180, elev: 24 * Math.PI / 180, dist: 1000, aim: 40 };
+function projP(x, y, z) {   // → [screen x, screen y (down)], in ~car units at the car centre
+  const C = CARP, ca = Math.cos(C.yaw), sa = Math.sin(C.yaw), ce = Math.cos(C.elev), se = Math.sin(C.elev);
+  const X = x * ca - z * sa, Z = x * sa + z * ca;
+  const vy = y - (C.aim + se * C.dist), vz = Z - ce * C.dist;
+  const depth = -se * vy - ce * vz, up = ce * vy - se * vz;
+  return [X / depth * C.dist, -up / depth * C.dist];
+}
+const camPos = () => { const C = CARP; return [0, C.aim + Math.sin(C.elev) * C.dist, Math.cos(C.elev) * C.dist]; };
+// plan outline of a rounded rectangle (x0..x1, z −hz..hz, corner r), CCW seen from above
+function planRR(x0, x1, hz, r, n) {
+  n = n || 7; r = Math.min(r, (x1 - x0) / 2 - 0.5, hz - 0.5); const pts = [], cs = [[x1 - r, hz - r, 0], [x0 + r, hz - r, 90], [x0 + r, -hz + r, 180], [x1 - r, -hz + r, 270]];
+  cs.forEach(([cx, cz, a0]) => { for (let i = 0; i <= n; i++) { const a = (a0 + 90 * i / n) * Math.PI / 180; pts.push([cx + Math.cos(a) * r, cz + Math.sin(a) * r]); } });
+  return pts;
+}
+// is the vertical face on plan edge p→q (outward normal) facing the camera?  (world, before yaw)
+function faceVisible(p, q, y) {
+  const C = CARP, nx = q[1] - p[1], nz = -(q[0] - p[0]);   // outward for a CCW outline (x right, z up in plan)
+  const mx = (p[0] + q[0]) / 2, mz = (p[1] + q[1]) / 2;
+  const ca = Math.cos(C.yaw), sa = Math.sin(C.yaw), cam = camPos();
+  const X = mx * ca - mz * sa, Z = mx * sa + mz * ca, NX = nx * ca - nz * sa, NZ = nx * sa + nz * ca;
+  return NX * (cam[0] - X) + NZ * (cam[2] - Z) > 0;
+}
+const pathOf = (pts) => "M" + pts.map((p) => `${f2(p[0])} ${f2(p[1])}`).join(" L") + " Z";
+// visible run of a lofted band between two plan outlines (same point count) at heights y0 → y1
+function bandRun(lo, hi, y0, y1, pick) {
+  const n = lo.length, vis = [];
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n; vis.push(faceVisible(lo[i], lo[j], y0) && (!pick || pick(lo[i], lo[j]))); }
+  // start at a visible edge preceded by an invisible one
+  let s0 = vis.findIndex((v, i) => v && !vis[(i - 1 + n) % n]); if (s0 < 0) return null;
+  const top = [], bot = []; let i = s0;
+  while (vis[i]) { if (!top.length) { top.push(projP(hi[i][0], y1, hi[i][1])); bot.push(projP(lo[i][0], y0, lo[i][1])); } const j = (i + 1) % n; top.push(projP(hi[j][0], y1, hi[j][1])); bot.push(projP(lo[j][0], y0, lo[j][1])); i = j; if (i === s0) break; }
+  return top.concat(bot.reverse());
+}
+// a flat shape on the near side plane (z = −hw − e) / nose plane (x = hl + e) / a top plane (y)
+const onSide = (pts, e) => pts.map(([x, y]) => projP(x, y, -CARP.hw - (e || 0)));
+const onNose = (pts, e) => pts.map(([z, y]) => projP(CARP.hl + (e || 0), y, z));
+const onTop = (pts, y) => pts.map(([x, z]) => projP(x, y, z));
+const rectPts = (a0, a1, b0, b1) => [[a0, b0], [a1, b0], [a1, b1], [a0, b1]];
+function carP(B, S, u, done) {
+  const C = CARP, L = C.hl, Wh = C.hw;
+  const defs = lin(`${u}sd`, [[0, shade(B, 0.28)], [0.5, B], [1, shade(B, -0.32)]]) + lin(`${u}tp`, [[0, shade(B, 0.62)], [1, shade(B, 0.2)]], 0, 0, 1, 1) +
+    lin(`${u}rf`, [[0, shade(B, 0.55)], [1, shade(B, 0.22)]], 0, 0, 1, 1) + lin(`${u}ns`, [[0, shade(B, 0.02)], [1, shade(B, -0.34)]]) +
+    lin(`${u}gl`, [[0, "#7a8ce0"], [0.5, "#2a3270"], [1, "#161a40"]], 0, 0, 0.4, 1) + rad(`${u}w`, [[0, "#ffffff"], [0.55, "#c9cfe4"], [1, "#6d7393"]], 0.4, 0.35, 0.7) +
+    glow(`${u}g`, 3) + blur(`${u}sh`, 9);
+  const st = (w) => `stroke="${INK}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
+  let g = "";
+  // contact shadow (projected ground ellipse)
+  const sh = []; for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2; sh.push(projP(Math.cos(a) * (L + 18), 0, Math.sin(a) * (Wh + 16))); }
+  g += `<path d="${pathOf(sh)}" fill="#05030f" opacity=".55" filter="url(#${u}sh)"/>`;
+  const wheel = (wx, wz, far) => {   // a wheel disc in the side plane
+    const disc = (r, e) => { const p = []; for (let i = 0; i < 36; i++) { const a = i / 36 * Math.PI * 2; p.push(projP(wx + Math.cos(a) * r, C.axle + Math.sin(a) * r, wz + e)); } return pathOf(p); };
+    const e = wz < 0 ? -3 : 3;
+    let w = `<path d="${disc(C.wr, 0)}" fill="#1e1b30" ${st(3)}/>`;
+    if (far) return w;
+    w += `<path d="${disc(C.wr, e)}" fill="#1e1b30" ${st(3)}/><path d="${disc(14, e * 1.6)}" fill="url(#${u}w)" ${st(2)}/>`;
+    const c = projP(wx, C.axle, wz + e * 1.6);
+    for (let k = 0; k < 5; k++) { const a = k * 1.2566 + 0.3, p = projP(wx + Math.cos(a) * 11, C.axle + Math.sin(a) * 11, wz + e * 1.6); w += `<path d="M${f2(c[0])} ${f2(c[1])} L${f2(p[0])} ${f2(p[1])}" stroke="#8a90aa" stroke-width="1.8" stroke-linecap="round"/>`; }
+    w += `<path d="${disc(4.2, e * 1.8)}" fill="${S}" ${st(1.4)}/>`;
+    return w;
+  };
+  // far wheels (mostly hidden by the body)
+  g += wheel(C.wx, Wh - 4, true) + wheel(-C.wx, Wh - 4, true);
+  // lower body: visible band (nose + near side), then the deck top
+  const plan = planRR(-L, L, Wh, C.rc, 8);
+  const band = bandRun(plan, plan, C.sill, C.belt);
+  const bodyOutline = [];   // for the clip
+  g += `<path d="${pathOf(band)}" fill="url(#${u}sd)" ${st(3.4)}/>`;
+  bodyOutline.push(pathOf(band));
+  const noseBand = bandRun(plan, plan, C.sill, C.belt, (p, q) => (q[1] - p[1]) > 0.55 * Math.hypot(q[0] - p[0], q[1] - p[1]));   // edges whose normal points +x
+  if (noseBand) g += `<path d="${pathOf(noseBand)}" fill="url(#${u}ns)" opacity=".9"/>`;
+  // front bumper: a darker band round the nose
+  const bump = bandRun(plan, plan, C.sill, C.sill + 8, (p, q) => (q[1] - p[1]) > 0.2 * Math.hypot(q[0] - p[0], q[1] - p[1]));
+  if (bump) g += `<path d="${pathOf(bump)}" fill="${shade(B, -0.42)}" ${st(1.6)}/>`;
+  // a soft highlight down the rounded front corner
+  const cc = [L - C.rc + Math.cos(-Math.PI / 4) * C.rc, -Wh + C.rc + Math.sin(-Math.PI / 4) * C.rc], hc0 = projP(cc[0], C.belt - 6, cc[1]), hc1 = projP(cc[0], C.sill + 8, cc[1]);
+  g += `<path d="M${f2(hc0[0])} ${f2(hc0[1])} L${f2(hc1[0])} ${f2(hc1[1])}" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".35"/>`;
+  g += `<path d="${pathOf(band)}" fill="none" ${st(3.4)}/>`;
+  const deck = onTop(plan, C.belt);
+  g += `<path d="${pathOf(deck)}" fill="url(#${u}tp)" ${st(3.4)}/>`;
+  bodyOutline.push(pathOf(deck));
+  // hood + trunk panel lines, twin neon stripes along the hood
+  g += `<path d="${pathOf(onTop(planRR(C.hood[0] + 4, L - 6, Wh - 6, C.rc - 6, 6), C.belt))}" fill="none" stroke="${shade(B, -0.3)}" stroke-width="1.6"/>`;
+  g += `<path d="${pathOf(onTop(planRR(-L + 6, -104, Wh - 6, C.rc - 6, 6), C.belt))}" fill="none" stroke="${shade(B, -0.3)}" stroke-width="1.6"/>`;
+  [[-15, -5], [5, 15]].forEach(([z0, z1]) => { g += `<path d="${pathOf(onTop(rectPts(C.hood[0] + 8, L - 10, z0, z1), C.belt))}" fill="${S}" ${st(1.6)}/>`; });
+  // nose: headlights (near one bigger by perspective), grille, bumper
+  [[-36, -14], [14, 36]].forEach(([z0, z1]) => {
+    const d = roundPoly(onNose(rectPts(z0, z1, 40, 54), 0.5), 4);
+    g += `<path d="${d}" fill="#fff6c8" opacity=".6" filter="url(#${u}g)"/><path d="${d}" fill="#fff6c8" ${st(2)}/>`;
+    g += `<path d="${roundPoly(onNose(rectPts(z0 + 3, z0 + 9, 45, 51), 0.8), 2)}" fill="#fff"/>`;
+  });
+  g += `<path d="${roundPoly(onNose(rectPts(-10, 10, 24, 44), 0.5), 4)}" fill="#17123a" ${st(2)}/>`;
+  [29, 34, 39].forEach((y) => { const a = projP(L + 1, y, -7), b = projP(L + 1, y, 7); g += `<path d="M${f2(a[0])} ${f2(a[1])} L${f2(b[0])} ${f2(b[1])}" stroke="${S}" stroke-width="1.8" stroke-linecap="round"/>`; });
+  // near side: neon sill stripe, doors, handles, lights
+  const sl = (x0, x1, y) => { const a = projP(x0, y, -Wh - 0.5), b = projP(x1, y, -Wh - 0.5); return `M${f2(a[0])} ${f2(a[1])} L${f2(b[0])} ${f2(b[1])}`; };
+  g += `<path d="${sl(-122, 124, 30)}" stroke="${S}" stroke-width="5" stroke-linecap="round" opacity=".5" filter="url(#${u}g)"/><path d="${sl(-122, 124, 30)}" stroke="${S}" stroke-width="3.2" stroke-linecap="round"/>`;
+  g += `<path d="${sl(-120, 120, 57)}" stroke="#fff" stroke-width="${done ? 3 : 2}" stroke-linecap="round" opacity="${done ? 0.9 : 0.45}"/>`;
+  [[62, 18], [0, 16], [-62, 18]].forEach(([x, y0]) => { const a = projP(x, C.belt - 2, -Wh - 0.5), b = projP(x, y0, -Wh - 0.5); g += `<path d="M${f2(a[0])} ${f2(a[1])} L${f2(b[0])} ${f2(b[1])}" stroke="${shade(B, -0.38)}" stroke-width="1.6"/>`; });
+  [40, -22].forEach((x) => { g += `<path d="${roundPoly(onSide(rectPts(x - 7, x + 7, 49, 53), 0.8), 1.6)}" fill="${shade(B, -0.4)}"/>`; });
+  // wheel wells + near wheels
+  [C.wx, -C.wx].forEach((wx) => {
+    const p = []; for (let i = 0; i <= 24; i++) { const a = Math.PI + i / 24 * Math.PI; p.push(projP(wx + Math.cos(a) * C.wellR, C.axle - Math.sin(a) * C.wellR, -Wh - 0.5)); }
+    g += `<path d="${pathOf(p)}" fill="#151228" ${st(2.2)}/>`;
+    g += wheel(wx, -Wh, false);
+  });
+  // cabin (lofted frustum): visible faces, roof, glass
+  const [bx0, bx1, bz, br] = C.cabBase, [tx0, tx1, tz, tr] = C.cabTop;
+  const cb = planRR(bx0, bx1, bz, br, 6), ct = planRR(tx0, tx1, tz, tr, 6);
+  const cab = bandRun(cb, ct, C.belt, C.roof);
+  g += `<path d="${pathOf(cab)}" fill="url(#${u}sd)" ${st(3)}/>`;
+  bodyOutline.push(pathOf(cab));
+  const roofD = pathOf(onTop(ct, C.roof));
+  g += `<path d="${roofD}" fill="url(#${u}rf)" ${st(3)}/>`;
+  // windshield glass: on the front face of the frustum (base x = bx1, top x = tx1)
+  const wsp = (t, zf) => { const x = bx1 + (tx1 - bx1) * t, y = C.belt + (C.roof - C.belt) * t, z = (bz + (tz - bz) * t) * zf; return projP(x + 0.6, y, z); };
+  const wsq = [wsp(0.1, -0.78), wsp(0.1, 0.78), wsp(0.9, 0.8), wsp(0.9, -0.8)];
+  g += `<path d="${roundPoly(wsq, 6)}" fill="url(#${u}gl)" ${st(2)}/>`;
+  g += `<path d="${roundPoly([wsp(0.25, -0.55), wsp(0.25, -0.4), wsp(0.8, -0.2), wsp(0.8, -0.35)], 2)}" fill="#bff6ff" opacity=".35"/>`;
+  const wp0 = wsp(0.16, -0.6), wp1 = wsp(0.24, 0.15);
+  g += `<path d="M${f2(wp0[0])} ${f2(wp0[1])} L${f2(wp1[0])} ${f2(wp1[1])}" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`;
+  // side windows: on the near face of the frustum (base z = −bz, top z = −tz)
+  const swp = (xu, t) => { const xa = bx0 + br + (tx0 + tr - bx0 - br) * t, xb = bx1 - br + (tx1 - tr - bx1 + br) * t, y = C.belt + (C.roof - C.belt) * t, z = -(bz + (tz - bz) * t); return projP(xa + (xb - xa) * xu, y, z - 0.6); };
+  [[0.02, 0.47], [0.53, 0.98]].forEach(([a, b]) => { g += `<path d="${roundPoly([swp(a, 0.14), swp(b, 0.14), swp(b, 0.86), swp(a, 0.86)], 5)}" fill="url(#${u}gl)" ${st(2)}/>`; });
+  [[0.12, 0.2], [0.62, 0.7]].forEach(([a, b]) => { g += `<path d="${roundPoly([swp(a, 0.3), swp(b, 0.3), swp(b + 0.06, 0.75), swp(a + 0.06, 0.75)], 2)}" fill="#bff6ff" opacity=".3"/>`; });
+  // side mirror at the A-pillar foot
+  const m0 = projP(bx1 - 10, C.belt + 6, -bz - 2), m1 = projP(bx1 - 2, C.belt + 12, -bz - 12);
+  g += `<path d="M${f2(m0[0])} ${f2(m0[1])} L${f2(m1[0])} ${f2(m1[1])}" stroke="${INK}" stroke-width="9" stroke-linecap="round"/><path d="M${f2(m0[0])} ${f2(m0[1])} L${f2(m1[0])} ${f2(m1[1])}" stroke="${B}" stroke-width="5" stroke-linecap="round"/>`;
+  return { defs, body: g, clip: bodyOutline.map((d) => `<path d="${d}"/>`).join("") };
+}
+// bounding boxes (projected, car units) used for the layouts and the spot areas
+function carBBox() { const pts = []; planRR(-CARP.hl, CARP.hl, CARP.hw, CARP.rc).forEach(([x, z]) => { pts.push(projP(x, 0, z), projP(x, CARP.belt, z)); }); planRR(...CARP.cabTop.slice(0, 1), CARP.cabTop[1], CARP.cabTop[2], CARP.cabTop[3]).forEach(([x, z]) => pts.push(projP(x, CARP.roof, z))); const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; }
+const hoodQuad = (inset) => onTop([[CARP.hood[0] + inset[0], -CARP.hw + inset[1]], [CARP.hl - inset[0], -CARP.hw + inset[1]], [CARP.hl - inset[0], CARP.hw - inset[1]], [CARP.hood[0] + inset[0], CARP.hw - inset[1]]], CARP.belt);
+const doorQuad = () => onSide([[-58, 20], [60, 20], [60, 58], [-58, 58]], 0.5);
+const WASH_LAYOUT = {
+  portrait: { W: 900, H: 1300, hoodW: 0.62, hoodC: [0.38, 0.56] },   // hood-top width + centre (fractions)
+  wide: { W: 1600, H: 900, carW: 0.6, carCx: 0.56, bottom: 0.92 },
 };
 (() => {
-  const P = WASH_LAYOUT.portrait, Wd = WASH_LAYOUT.wide, wb = 98 + 21 * C3.wk;
-  P.tx = P.nose * P.W - 306 * P.s; P.ty = P.ground - wb * P.s;
-  Wd.tx = Wd.left - 14 * Wd.s; Wd.ty = Wd.ground - wb * Wd.s;
-})();
-// spot-centre regions (fractions of each image): [hood TOP, side panel], hood first.
-//   hood top = the parallelogram between the near hood edge (x 244..303) and its far copy,
-//   inset (5 % along, 35 % across); portrait side = the band above the front wheel arch (up to
-//   the headlight); wide side = the doors under the windows.
-function washAreas() {
-  const box = (L, x0, y0, x1, y1, clampX) => {
-    let a = (L.tx + x0 * L.s) / L.W, b = (L.tx + x1 * L.s) / L.W;
-    if (clampX) { a = Math.max(a, clampX[0]); b = Math.min(b, clampX[1]); }
-    return { x: +a.toFixed(3), y: +((L.ty + y0 * L.s) / L.H).toFixed(3), w: +(b - a).toFixed(3), h: +(((y1 - y0) * L.s) / L.H).toFixed(3) };
-  };
-  const hood = (L, cl) => box(L, 244 + 0.05 * 59 + 0.65 * C3.D, c3Y(54) - 0.65 * C3.dy, 244 + 0.95 * 59 + 0.35 * C3.D, c3Y(54) - 0.35 * C3.dy, cl);
   const P = WASH_LAYOUT.portrait, Wd = WASH_LAYOUT.wide;
+  const hq = hoodQuad([0, 0]), hx = hq.map((p) => p[0]), hy = hq.map((p) => p[1]);
+  P.s = P.hoodW * P.W / (Math.max(...hx) - Math.min(...hx));
+  P.tx = P.hoodC[0] * P.W - (Math.max(...hx) + Math.min(...hx)) / 2 * P.s; P.ty = P.hoodC[1] * P.H - (Math.max(...hy) + Math.min(...hy)) / 2 * P.s;
+  const bb = carBBox();
+  Wd.s = Wd.carW * Wd.W / (bb[2] - bb[0]); Wd.tx = Wd.carCx * Wd.W - (bb[0] + bb[2]) / 2 * Wd.s; Wd.ty = Wd.bottom * Wd.H - bb[3] * Wd.s;
+})();
+// largest axis-aligned box (fractions of the image) whose corners all lie inside a convex
+// projected quad, optionally limited to x/y ranges and with a minimum height — grid search
+function boxInQuad(L, quad, o) {
+  o = o || {};
+  const q = quad.map(([x, y]) => [(L.tx + x * L.s) / L.W, (L.ty + y * L.s) / L.H]);
+  const inside = (x, y) => { let sg = 0; for (let i = 0; i < 4; i++) { const a = q[i], b = q[(i + 1) % 4], c = (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]); if (c !== 0) { if (sg && Math.sign(c) !== sg) return false; sg = Math.sign(c); } } return true; };
+  const xs = q.map((p) => p[0]), ys = q.map((p) => p[1]), N = 36;
+  const X0 = Math.max(Math.min(...xs), (o.x || [0, 1])[0]), X1 = Math.min(Math.max(...xs), (o.x || [0, 1])[1]), Y0 = Math.max(Math.min(...ys), (o.y || [0, 1])[0]), Y1 = Math.min(Math.max(...ys), (o.y || [0, 1])[1]);
+  let best = null;
+  for (let i = 0; i < N; i++) for (let j = i + 1; j <= N; j++) {
+    const x0 = X0 + (X1 - X0) * i / N, x1 = X0 + (X1 - X0) * j / N;
+    for (let k = 0; k < N; k++) for (let l = k + 1; l <= N; l++) {
+      const y0 = Y0 + (Y1 - Y0) * k / N, y1 = Y0 + (Y1 - Y0) * l / N;
+      if (y1 - y0 < (o.minH || 0) || x1 - x0 < (o.minW || 0)) continue;
+      const area = (x1 - x0) * (y1 - y0);
+      if (best && area <= best.area) continue;
+      if (inside(x0, y0) && inside(x1, y0) && inside(x1, y1) && inside(x0, y1)) best = { area, x0, x1, y0, y1 };
+    }
+  }
+  return best && { x: +best.x0.toFixed(3), y: +best.y0.toFixed(3), w: +(best.x1 - best.x0).toFixed(3), h: +(best.y1 - best.y0).toFixed(3) };
+}
+// spot-centre regions (fractions of each image): [hood TOP, door panel], hood first — boxes
+// inscribed in the hood paint (inset from its edges + the stripes are paint too) and in the doors
+function washAreas() {
+  const P = WASH_LAYOUT.portrait, Wd = WASH_LAYOUT.wide, hq = hoodQuad([10, 10]);
   return {
-    portrait: [hood(P, [0.2, 0.8]), box(P, 252, c3Y(60) + 0.5, 286, 62, [0.2, 0.8])],   // side band stops before the headlight
-    wide: [hood(Wd), box(Wd, 118, c3Y(64), 208, c3Y(90))],
+    portrait: [boxInQuad(P, hq, { x: [0.2, 0.8], minH: 0.08, minW: 0.14 }), boxInQuad(P, doorQuad(), { x: [0.2, 0.8], minW: 0.14 })],
+    wide: [boxInQuad(Wd, hq, { y: [0.2, 0.8], minH: 0.07, minW: 0.14 }), boxInQuad(Wd, doorQuad(), { y: [0.2, 0.8], minW: 0.14 })],
   };
+}
+// rounded polygon through projected points (corner radius r, clamped to half of each edge)
+function roundPoly(pts, r) {
+  const n = pts.length, cut = (p, q) => { const dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy) || 1, k = Math.min(r / L, 0.5); return [p[0] + dx * k, p[1] + dy * k]; };
+  let d = "";
+  for (let i = 0; i < n; i++) {
+    const p = pts[i], a = cut(p, pts[(i - 1 + n) % n]), b = cut(p, pts[(i + 1) % n]);
+    d += (i ? `L${f2(a[0])} ${f2(a[1])}` : `M${f2(a[0])} ${f2(a[1])}`) + `Q${f2(p[0])} ${f2(p[1])} ${f2(b[0])} ${f2(b[1])}`;
+  }
+  return d + "Z";
 }
 function bubble(x, y, r, op) {   // a soap bubble: tinted rim + glints
   return `<circle cx="${f2(x)}" cy="${f2(y)}" r="${f2(r)}" fill="#bff6ff" fill-opacity=".12" stroke="#e8fbff" stroke-width="${f2(Math.max(1.6, r * 0.09))}" opacity="${op || 0.8}"/>` +
@@ -1164,59 +1328,6 @@ function bubble(x, y, r, op) {   // a soap bubble: tinted rim + glints
     `<circle cx="${f2(x + r * 0.4)}" cy="${f2(y + r * 0.38)}" r="${f2(r * 0.1)}" fill="#ffd6f0" opacity="${op || 0.8}"/>`;
 }
 const DROP = (x, y, s) => `M${f2(x)} ${f2(y - 14 * s)} Q${f2(x + 9 * s)} ${f2(y - 1 * s)} ${f2(x + 8 * s)} ${f2(y + 3 * s)} Q${f2(x + 7 * s)} ${f2(y + 10 * s)} ${f2(x)} ${f2(y + 10 * s)} Q${f2(x - 7 * s)} ${f2(y + 10 * s)} ${f2(x - 8 * s)} ${f2(y + 3 * s)} Q${f2(x - 9 * s)} ${f2(y - 1 * s)} ${f2(x)} ${f2(y - 14 * s)} Z`;
-// The car in a slightly elevated 3/4 front-side view (see C3), in carSide()'s design space:
-// the lower body (below the belt line) is extruded by the full car width V = (D, -dy); the
-// cabin is narrower (from 0.15·V to 0.85·V), so a belt "shoulder", the hood top, the trunk lid,
-// the roof and the windshield all show as top surfaces. Returns the clip of the whole volume.
-function car3q(B, S, u, done) {
-  const { D, dy, hk, wk } = C3, C0 = 0.15, C1 = 0.85;
-  const cs = carSide({ body: B, stripe: S, u, sw: 4, hk, wk, noShine: !done });
-  const far = (x, y, v) => [x + D * v, c3Y(y) - dy * v];
-  const pt = (p) => `${f2(p[0])} ${f2(p[1])}`;
-  const band = (pts, v0, v1) => { const a = pts.map((p) => far(p[0], p[1], v0)), b = pts.slice().reverse().map((p) => far(p[0], p[1], v1)); return "M" + a.concat(b).map(pt).join(" L") + " Z"; };
-  const tr = (v) => `translate(${f2(D * v)} ${f2(-dy * v)})`;
-  // belt line: cabin = above it (incl. the A-pillar foot), lower body = below it
-  // (above the A-pillar foot the cut runs along V, so the extruded copies' cut edges line up — no teeth)
-  const belt = `M-20 ${f2(c3Y(54.5))} L236 ${f2(c3Y(54.5))} L249 ${f2(c3Y(49))} L${f2(249 + D * 10)} ${f2(c3Y(49) - dy * 10)}`;
-  const defs = cs.defs + lin(`${u}top`, [[0, shade(B, 0.55)], [1, shade(B, 0.15)]], 0, 0, 1, 0) + lin(`${u}tp2`, [[0, shade(B, 0.35)], [1, shade(B, 0.05)]]) +
-    lin(`${u}gls`, [[0, "#6a7cd0"], [0.6, "#2a3270"], [1, "#161a40"]]) + lin(`${u}ff`, [[0, shade(B, -0.02)], [1, shade(B, -0.3)]]) +
-    `<clipPath id="${u}lo"><path d="${belt} L500 -400 L500 300 L-20 300 Z"/></clipPath><clipPath id="${u}up"><path d="${belt} L-20 -400 Z"/></clipPath>`;
-  const vol = (cl, v0, v1, n) => {
-    let ink = "", fill = "", clip = "";
-    for (let i = n; i >= 0; i--) {
-      const t = tr(v0 + (v1 - v0) * i / n);
-      ink += `<g transform="${t}"><g clip-path="url(#${u}${cl})"><path d="${cs.bodyD}" fill="${INK}" stroke="${INK}" stroke-width="8" stroke-linejoin="round"/></g></g>`;
-      fill += `<g transform="${t}"><g clip-path="url(#${u}${cl})"><path d="${cs.bodyD}" fill="${shade(B, -0.12)}"/></g></g>`;
-      clip += `<path transform="${t}" d="${cs.bodyD}"/>`;
-    }
-    return { g: ink + fill, clip };
-  };
-  const surf = (pts, v0, v1, fill, w) => `<path d="${band(pts, v0, v1)}" fill="${fill}" ${stk(w || 3)}/>`;
-  const lo = vol("lo", 0, 1, 40), up = vol("up", C0, C1, 30);   // many steps: no staircase on sloped edges
-  let g = lo.g;
-  // lower-body top surfaces: belt shoulder, trunk lid, hood (with twin stripes), front face
-  g += surf([[24, 64], [60, 58.5], [97, 54.5], [236, 54.5], [249, 49]], 0, 1, `url(#${u}tp2)`, 2.6);
-  g += surf([[303, 62], [306.5, 72], [306, 84], [304, 94]], 0, 1, `url(#${u}ff)`);
-  const hl = far(305.5, 68, 0.75), gr0 = far(305.8, 80, 0.25), gr1 = far(305.8, 80, 0.75);
-  g += `<ellipse cx="${f2(hl[0])}" cy="${f2(hl[1])}" rx="3.2" ry="4.2" fill="#fff6c8" ${stk(1.6)}/>`;
-  g += `<path d="M${pt(gr0)} L${pt(gr1)}" stroke="#17123a" stroke-width="5" stroke-linecap="round"/><path d="M${pt(gr0)} L${pt(gr1)}" stroke="${S}" stroke-width="1.6" stroke-linecap="round"/>`;
-  // cabin (narrower): volume, top surfaces, near cabin side
-  g += up.g;
-  g += surf([[24, 64], [60, 58.5], [97, 54.5]], 0, 1, `url(#${u}tp2)`);                          // trunk lid (after the cabin volume: hides its corner seam)
-  g += surf([[97, 54], [110, 40], [128, 29], [158, 24.5]], C0, C1, `url(#${u}gls)`);              // rear window
-  g += surf([[158, 24.2], [180, 23.6], [199, 24.2]], C0, C1, `url(#${u}top)`);                    // roof
-  g += surf([[199, 24.4], [218, 29], [233, 39], [246, 49]], C0, C1, `url(#${u}gls)`);             // windshield
-  g += `<path d="${band([[204, 26], [222, 31.5]], 0.25, 0.75)}" fill="#bff6ff" opacity=".35"/><path d="${band([[226, 34], [236, 41]], 0.3, 0.7)}" fill="#bff6ff" opacity=".3"/>`;
-  // hood top last among the surfaces: it covers the cowl seam where cabin and lower body meet
-  const hoodPts = [[244, 48.5], [250, 51.5], [270, 55], [292, 58], [303, 62]];
-  g += surf(hoodPts, 0, 1, `url(#${u}top)`);
-  g += `<path d="${band(hoodPts.slice(1), 0.34, 0.46)}" fill="${S}" ${stk(2)}/><path d="${band(hoodPts.slice(1), 0.54, 0.66)}" fill="${S}" ${stk(2)}/>`;
-  const nearBody = cs.body.replace(/<ellipse[^>]*filter="url\(#[^"]*bl\)"\/>/, "");                 // (scene draws its own shadow)
-  g += `<g transform="${tr(C0)}"><g clip-path="url(#${u}up)">${nearBody}</g></g>`;
-  g += `<g clip-path="url(#${u}lo)">${nearBody}</g>`;
-  g += `<path d="M24 ${f2(c3Y(64))} Q60 ${f2(c3Y(58.5))} 97 ${f2(c3Y(54.5))} L236 ${f2(c3Y(54.5))} L249 ${f2(c3Y(49))}" fill="none" ${stk(3)}/>`;  // near belt edge
-  return { defs, body: g, clip: lo.clip + up.clip };
-}
 // The girl washing the car: Nadia's face + ponytail, a cap, a modest short-sleeved one-piece
 // swimsuit with knee-length board shorts, flip-flops. 128 frame, feet ≈ y 120 (like person()).
 // pose: "spray" (hose up toward the car, mouth open smile) | "cheer" (thumbs-up, hose lowered).
@@ -1311,61 +1422,80 @@ function bucket(x, y, s, u) {   // bucket with suds, bottom centre (x,y)
   [[-26, -66, 13], [-8, -74, 16], [12, -70, 14], [28, -64, 11], [2, -86, 10], [-18, -84, 8]].forEach(([dx, dy, r]) => { g += `<circle cx="${x + dx * s}" cy="${y + dy * s}" r="${r * s}" fill="url(#${u}sud)" ${stk(2.6 * s)}/>`; });
   return g;
 }
+// neon garage the car rolls out of: facade + open door (warm-lit interior, rolled-up door,
+// neon frame) whose floor line is `base`; x0..x1 = opening
+function garageFront(x0, x1, base, h, u) {
+  const w = x1 - x0, m = w * 0.14;
+  let g = `<rect x="${f2(x0 - m)}" y="${f2(base - h - m * 1.2)}" width="${f2(w + 2 * m)}" height="${f2(h + m * 1.2)}" fill="url(#${u}gw)" ${stk(6)}/>`;
+  g += `<rect x="${f2(x0)}" y="${f2(base - h)}" width="${f2(w)}" height="${f2(h)}" fill="url(#${u}gi)"/>`;
+  for (let i = 1; i < 4; i++) g += `<path d="M${f2(x0 + w * i / 4)} ${f2(base - h)} V${f2(base)}" stroke="#ffd98a" stroke-width="2" opacity=".25"/>`;
+  const dh = h * 0.16;   // rolled-up door
+  g += `<rect x="${f2(x0)}" y="${f2(base - h)}" width="${f2(w)}" height="${f2(dh)}" fill="#8d93b8" ${stk(4)}/>`;
+  for (let k = 1; k < 4; k++) g += `<path d="M${f2(x0 + 3)} ${f2(base - h + dh * k / 4)} H${f2(x1 - 3)}" stroke="#5d6288" stroke-width="2.4"/>`;
+  g += neon(`M${f2(x0 - 8)} ${f2(base)} V${f2(base - h - 8)} H${f2(x1 + 8)} V${f2(base)}`, PINK, 5, `${u}n`);
+  g += neon(`M${f2(x0 + w * 0.3)} ${f2(base - h - m * 0.6)} H${f2(x1 - w * 0.3)}`, CYAN, 4, `${u}n`);
+  return g;
+}
 function washScene(v, done, wide) {
-  const L = wide ? WASH_LAYOUT.wide : WASH_LAYOUT.portrait, { W, H, s, tx, ty, ground } = L, [B, S] = WASH_COLORS[v], u = "w";
-  const hz = wide ? 520 : 760;
-  const car = car3q(B, S, "wc", done), girl = washGirl(done ? "cheer" : "spray", "wg");
-  const GL = wide ? { x: 215, y: 878, s: 3.7 } : { x: 243, y: 1236, s: 3.8 };   // girl feet + scale
-  const gp = (p) => [GL.x + (p[0] - 64) * GL.s, GL.y + (p[1] - 120) * GL.s];
-  const defs = car.defs + girl.defs + glow(`${u}n`, 4) + blur(`${u}bl`, 10) + blur(`${u}sb`, 10) + glow(`${u}sg`, 6) +
+  const L = wide ? WASH_LAYOUT.wide : WASH_LAYOUT.portrait, { W, H, s, tx, ty } = L, [B, S] = WASH_COLORS[v], u = "w";
+  const im = (p) => [tx + p[0] * s, ty + p[1] * s];
+  const car = carP(B, S, "wc", done), girl = washGirl(done ? "cheer" : "spray", "wg");
+  // floor line: just behind the car's tail (the garage it rolls out of is there)
+  const tailL = im(projP(-CARP.hl - 4, 0, -CARP.hw)), tailR = im(projP(-CARP.hl - 4, 0, CARP.hw)), tailTop = im(projP(-CARP.hl, CARP.roof + 30, 0));
+  const hz = Math.min(tailL[1], tailR[1]) - 4;
+  // girl: standing on the floor BEHIND the car (far side), mirrored so her hose arm points at the car
+  const gw = wide ? [-30, 0, CARP.hw + 46] : [20, 0, CARP.hw + 44];
+  const gfeet = im(projP(...gw)), ghead = im(projP(gw[0], 150, gw[2]));
+  const GL = { x: gfeet[0], y: gfeet[1], s: (gfeet[1] - ghead[1]) / 150 * 1.02 };   // ~1.5 m tall: as tall as 150 car units
+  const gp = (p) => [GL.x - (p[0] - 64) * GL.s, GL.y + (p[1] - 120) * GL.s];       // mirrored frame → image
+  const defs = car.defs + girl.defs + glow(`${u}n`, 4) + blur(`${u}bl`, 10) + glow(`${u}sg`, 6) +
     lin(`${u}sky`, [[0, "#22165e"], [0.45, "#7a2f8e"], [0.75, "#ff6f8e"], [1, "#ffb36a"]]) +
     rad(`${u}sun`, [[0, "#ffe27a"], [0.55, "#ff9a8a"], [1, "#ff5aa0"]], 0.5, 0.15, 0.9) +
     lin(`${u}wal`, [[0, "#4b3a8e"], [1, "#2f2566"]]) + lin(`${u}flr`, [[0, "#5a5a94"], [0.25, "#3c3a76"], [1, "#24204e"]]) +
+    lin(`${u}gw`, [[0, "#3a2f78"], [1, "#2a2160"]]) + lin(`${u}gi`, [[0, "#ffd98a", 0.9], [0.5, "#ff9a6a", 0.75], [1, "#7a3a6a", 0.9]]) +
     lin(`${u}bk`, [[0, "#5ad0ff"], [1, "#2a7fd0"]], 0, 0, 1, 0) + rad(`${u}sud`, [[0, "#ffffff"], [0.7, "#f2fbff"], [1, "#cfe9ff"]], 0.38, 0.32, 0.7) +
     rad(`${u}halo`, [[0, mix(B, "#ffffff", 0.5), 0.55], [0.6, B, 0.15], [1, B, 0]]) + rad(`${u}pud`, [[0, "#9fdcff", 0.35], [1, "#9fdcff", 0]]) +
+    rad(`${u}spill`, [[0, "#ffd98a", 0.4], [1, "#ffd98a", 0]]) +
     `<clipPath id="${u}clip">${car.clip}</clipPath>`;
   const R = rng(wide ? 53 : 41);
   let g = washSpot(W, H, hz, u, R);
-  const cg = (body) => `<g transform="translate(${f2(tx)} ${f2(ty)}) scale(${s})">${body}</g>`;
-  // puddle + colour reflection + contact shadow under the car
-  const cx0 = tx + 170 * s;
-  g += `<ellipse cx="${f2(cx0)}" cy="${ground + 40}" rx="${f2(190 * s)}" ry="${wide ? 50 : 70}" fill="url(#${u}pud)"/>`;
-  g += `<ellipse cx="${f2(cx0)}" cy="${ground + 26}" rx="${f2(150 * s)}" ry="${wide ? 22 : 30}" fill="${B}" opacity=".25" filter="url(#${u}bl)"/>`;
-  g += `<ellipse cx="${f2(cx0)}" cy="${ground - 4}" rx="${f2(150 * s)}" ry="${wide ? 16 : 22}" fill="#05030f" opacity=".55" filter="url(#${u}sb)"/>`;
-  if (done) g += `<ellipse cx="${f2(cx0 + 20 * s)}" cy="${f2(ty + 50 * s)}" rx="${f2(200 * s)}" ry="${f2(110 * s)}" fill="url(#${u}halo)"/>`;
+  // garage behind the tail + its warm light spilling on the floor
+  const gx0 = Math.min(tailL[0], tailR[0]) - 40 * s * 0.3, gx1 = Math.max(tailL[0], tailR[0]) + 40 * s * 0.3, gh = Math.max(hz - tailTop[1], 120);
+  g += garageFront(gx0, gx1, hz, gh, u);
+  g += `<ellipse cx="${f2((gx0 + gx1) / 2)}" cy="${f2(hz + 40)}" rx="${f2((gx1 - gx0) * 0.9)}" ry="${f2(60 * s * 0.3)}" fill="url(#${u}spill)"/>`;
+  // puddle + colour reflection under the car
+  const c0 = im(projP(0, 0, 0)), bb = carBBox();
+  g += `<ellipse cx="${f2(c0[0])}" cy="${f2(c0[1] + 30)}" rx="${f2((bb[2] - bb[0]) * s * 0.6)}" ry="${f2((bb[3] - bb[1]) * s * 0.22)}" fill="url(#${u}pud)"/>`;
+  if (done) g += `<ellipse cx="${f2(c0[0])}" cy="${f2(ty + (bb[1] + bb[3]) / 2 * s)}" rx="${f2((bb[2] - bb[0]) * s * 0.7)}" ry="${f2((bb[3] - bb[1]) * s * 0.75)}" fill="url(#${u}halo)"/>`;
+  // the girl behind the car (drawn first: the car hides her legs) + her hose going down behind it
+  const hd = girl.hand ? gp(girl.hand) : null;
+  if (hd) { const hose = `M${f2(hd[0])} ${f2(hd[1])} Q${f2(hd[0] - 30 * GL.s)} ${f2(hd[1] + 40 * GL.s)} ${f2(GL.x)} ${f2(GL.y)}`; g += `<path d="${hose}" fill="none" stroke="${INK}" stroke-width="${f2(GL.s * 5.4)}" stroke-linecap="round"/><path d="${hose}" fill="none" stroke="#3fcf7a" stroke-width="${f2(GL.s * 3)}" stroke-linecap="round"/>`; }
+  g += `<g transform="translate(${f2(GL.x)} ${f2(GL.y)}) scale(${f2(-GL.s)} ${f2(GL.s)}) translate(-64 -120)">${girl.body}</g>`;
+  // the car + its finish (clipped to the painted volume)
+  const cg = (body) => `<g transform="translate(${f2(tx)} ${f2(ty)}) scale(${f2(s)})">${body}</g>`;
   g += cg(car.body);
-  // finish, clipped to the car volume
-  // (the clipPath content is in car space, so the clipped group sits inside the car transform)
+  const bw = bb[2] - bb[0];
   g += cg(`<g clip-path="url(#${u}clip)">` + (done ?
-    [[40, 8], [130, 14], [200, 6], [262, 12]].map(([x, w]) => `<path d="M${x} 130 L${x + w} 130 L${x + w + 70} -40 L${x + 70} -40 Z" fill="#fff" opacity=".2"/>`).join("") +
-      `<path d="M${f2(250 + C3.D * 0.3)} ${f2(c3Y(52) - C3.dy * 0.3)} L${f2(300 + C3.D * 0.3)} ${f2(c3Y(60) - C3.dy * 0.3)}" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".85"/><path d="M${f2(160 + C3.D * 0.5)} ${f2(c3Y(24) - C3.dy * 0.5)} L${f2(196 + C3.D * 0.5)} ${f2(c3Y(24) - C3.dy * 0.5)}" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/><path d="M40 ${f2(c3Y(66))} Q120 ${f2(c3Y(58))} 250 ${f2(c3Y(58))}" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".7"/>`
-    : `<rect x="-20" y="-60" width="380" height="200" fill="#7d7a8c" opacity=".24"/>` +
-      Array.from({ length: 90 }, () => `<circle cx="${f2(20 + R() * 300)}" cy="${f2(-30 + R() * 130)}" r="${f2(0.3 + R() * 0.6)}" fill="#8a6a4a" opacity="${f2(0.25 + R() * 0.25)}"/>`).join("") +
-      `<rect x="-20" y="${f2(c3Y(80))}" width="380" height="40" fill="#8a6a4a" opacity=".16"/>`) + `</g>`);
-  // bucket on the floor
-  g += wide ? bucket(1530, 880, 1.15, u) : bucket(800, 1250, 1.3, u);
-  // hose: from the girl's hand down to the floor and away in loops
-  const fy = GL.y - 6, hd = girl.hand ? gp(girl.hand) : [GL.x + 34 * GL.s, fy - 4 * GL.s];   // cheer: gun dropped on the floor
-  const hose = `M${f2(hd[0])} ${f2(hd[1])} Q${f2(hd[0] + 40)} ${f2((hd[1] + fy) / 2)} ${f2(hd[0] + 20)} ${f2(fy)} Q${f2(hd[0] - 30)} ${f2(fy + 26)} ${f2(GL.x - 60)} ${f2(fy + 18)} Q${f2(GL.x - 160)} ${f2(fy + 6)} ${f2(GL.x - 140)} ${f2(fy - 20)} Q${f2(GL.x - 100)} ${f2(fy - 40)} ${f2(GL.x - 240)} ${f2(fy - 40)}`;
-  g += `<path d="${hose}" fill="none" stroke="${INK}" stroke-width="${f2(GL.s * 5.4)}" stroke-linecap="round"/><path d="${hose}" fill="none" stroke="#3fcf7a" stroke-width="${f2(GL.s * 3)}" stroke-linecap="round"/><path d="${hose}" fill="none" stroke="#b6ffd0" stroke-width="${f2(GL.s * 0.9)}" stroke-linecap="round" opacity=".6"/>`;
-  if (!girl.hand) g += `<g transform="translate(${f2(hd[0])} ${f2(hd[1])}) scale(${GL.s}) rotate(-70)"><rect x="-3.8" y="-2" width="7.6" height="16" rx="2.5" fill="#3a3f78" ${stk(2.4)}/><rect x="-5" y="12" width="10" height="5" rx="2" fill="${YELLOW}" ${stk(2)}/></g>`;
-  // the girl
-  g += `<ellipse cx="${GL.x}" cy="${GL.y - 2}" rx="${f2(26 * GL.s)}" ry="${f2(5 * GL.s)}" fill="#05030f" opacity=".4" filter="url(#${u}bl)"/>`;
-  g += `<g transform="translate(${GL.x} ${GL.y}) scale(${GL.s}) translate(-64 -120)">${girl.body}</g>`;
-  // water jet from the hose onto the car (spray pose only)
+    [[0.08, 0.03], [0.3, 0.05], [0.52, 0.02], [0.7, 0.04]].map(([a, w]) => { const x = bb[0] + bw * a; return `<path d="M${f2(x)} ${f2(bb[3])} L${f2(x + bw * w)} ${f2(bb[3])} L${f2(x + bw * w + bw * 0.22)} ${f2(bb[1])} L${f2(x + bw * 0.22)} ${f2(bb[1])} Z" fill="#fff" opacity=".2"/>`; }).join("") +
+      (() => { const a = projP(CARP.hood[0] + 14, CARP.belt, 30), b = projP(CARP.hl - 16, CARP.belt, 30), c = projP(-60, CARP.roof, 20), d = projP(-14, CARP.roof, 20); return `<path d="M${f2(a[0])} ${f2(a[1])} L${f2(b[0])} ${f2(b[1])}" stroke="#fff" stroke-width="3.2" stroke-linecap="round" opacity=".9"/><path d="M${f2(c[0])} ${f2(c[1])} L${f2(d[0])} ${f2(d[1])}" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".85"/>`; })()
+    : `<rect x="${f2(bb[0] - 20)}" y="${f2(bb[1] - 20)}" width="${f2(bw + 40)}" height="${f2(bb[3] - bb[1] + 40)}" fill="#7d7a8c" opacity=".24"/>` +
+      Array.from({ length: 120 }, () => `<circle cx="${f2(bb[0] + R() * bw)}" cy="${f2(bb[1] + R() * (bb[3] - bb[1]))}" r="${f2(0.3 + R() * 0.7)}" fill="#8a6a4a" opacity="${f2(0.25 + R() * 0.25)}"/>`).join("")) + `</g>`);
+  // bucket on the floor (foreground, away from the spots)
+  g += wide ? bucket(W * 0.12, H * 0.95, 1.15, u) : bucket(W * 0.16, H * 0.93, 1.3, u);
+  // water jet from the hose over the car onto the hood (spray pose only)
   if (!done) {
-    const t = gp(girl.tip), aim = wide ? [tx + 120 * s, ty + c3Y(58) * s - 20] : [tx + 262 * s, ty + (c3Y(54) - C3.dy * 0.5) * s];
-    const mx = (t[0] + aim[0]) / 2, my = Math.min(t[1], aim[1]) - (wide ? 90 : 160);
+    const t = gp(girl.tip), aim = im(projP(CARP.hood[0] + 40, CARP.belt, 20));
+    const mx = (t[0] + aim[0]) / 2, my = Math.min(t[1], aim[1]) - (wide ? 110 : 170);
     [[0, 9, 0.85], [-14, 4, 0.6], [14, 4, 0.6]].forEach(([o, w, op]) => { g += `<path d="M${f2(t[0])} ${f2(t[1])} Q${f2(mx + o)} ${f2(my + o)} ${f2(aim[0] + o * 2)} ${f2(aim[1])}" fill="none" stroke="#bff6ff" stroke-width="${w}" stroke-linecap="round" opacity="${op}"/>`; });
     for (let i = 0; i < 9; i++) { const a = -Math.PI + R() * Math.PI, d = 20 + R() * 50; g += `<path d="${DROP(aim[0] + Math.cos(a) * d, aim[1] + Math.sin(a) * d * 0.6, 0.6 + R() * 0.5)}" fill="#9fe6ff" ${stk(2, "#e8fbff")}/>`; }
   }
-  // bubbles floating around (kept off the hood/side spot areas' centre)
+  // bubbles floating around
   const bub = wide ? [[60, 300, 22], [400, 180, 16], [700, 150, 26], [980, 240, 14], [1300, 200, 22], [1500, 360, 18], [560, 420, 12], [1180, 120, 12]]
     : [[110, 380, 24], [190, 300, 14], [760, 330, 26], [690, 250, 14], [840, 520, 16], [80, 640, 18], [520, 210, 12]];
   bub.forEach(([x, y, r]) => { g += bubble(x, y, r, 0.85); });
   if (done) {
-    const sp = wide ? [[0.66, 0.36, 34], [0.86, 0.42, 30], [0.5, 0.55, 22], [0.3, 0.5, 20], [0.75, 0.62, 24], [0.94, 0.6, 16], [0.4, 0.3, 18]]
-      : [[0.55, 0.22, 34], [0.86, 0.3, 28], [0.7, 0.42, 22], [0.45, 0.5, 18], [0.88, 0.62, 24], [0.6, 0.62, 16], [0.32, 0.18, 20]];
+    const sp = wide ? [[0.24, 0.4, 30], [0.66, 0.3, 30], [0.3, 0.66, 22], [0.82, 0.52, 20], [0.55, 0.8, 24], [0.12, 0.6, 16], [0.75, 0.16, 18]]
+      : [[0.12, 0.42, 30], [0.72, 0.26, 28], [0.2, 0.62, 22], [0.62, 0.66, 18], [0.86, 0.52, 24], [0.45, 0.78, 16], [0.82, 0.16, 20]];
     sp.forEach(([a, b, r], i) => { g += `<path d="${star(W * a, H * b, r, r * 0.28, 4)}" fill="${i % 3 === 1 ? "#bff6ff" : "#fff6c8"}" filter="url(#${u}sg)"/><path d="${star(W * a, H * b, r * 0.45, r * 0.14, 4)}" fill="#fff"/>`; });
   }
   return job(`assets/img/wash_${v}${wide ? "_wide" : ""}${done ? "_done" : ""}.png`, W, H, g, defs);
