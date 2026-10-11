@@ -993,6 +993,38 @@ function policeFront() {
   g += `</g>`;
   return job("assets/img/police_front.png", 200, 170, g, defs);
 }
+// Neon START gantry over the street race (seen from behind, slightly above): two metal pylons
+// standing on y 215, a truss across the top with a chequered neon strip, a row of start lights
+// (red + green) and pink/cyan accents. No text; the middle and bottom stay transparent.
+function startGate() {
+  const W = 400, H = 220, u = "sg";
+  const defs = lin(`${u}m`, [[0, "#5d6288"], [0.45, "#c9cde2"], [1, "#4a4f78"]], 0, 0, 1, 0) + lin(`${u}t`, [[0, "#3a3f78"], [1, "#24204e"]]) + glow(`${u}n`, 3) + blur(`${u}b`, 2.5);
+  let g = "";
+  [[16, 36], [364, 384]].forEach(([a, b]) => {   // pylons (4–9 % / 91–96 % of the width)
+    g += `<ellipse cx="${(a + b) / 2}" cy="215" rx="16" ry="4" fill="#07041a" opacity=".5" filter="url(#${u}b)"/>`;
+    g += `<rect x="${a}" y="20" width="${b - a}" height="194" rx="4" fill="url(#${u}m)" ${stk(3.4)}/>`;
+    for (let y = 70; y < 205; y += 28) g += `<path d="M${a + 3} ${y} L${b - 3} ${y + 22} M${b - 3} ${y} L${a + 3} ${y + 22}" stroke="#4a4f78" stroke-width="2.2"/>`;
+    g += `<rect x="${a - 4}" y="206" width="${b - a + 8}" height="9" rx="3" fill="#3a3f78" ${stk(2.6)}/>`;
+    g += neon(`M${a + (b - a) / 2} 66 V200`, a < 200 ? PINK : CYAN, 2.2, `${u}n`);
+  });
+  // truss: two chords + diagonals
+  g += `<rect x="10" y="14" width="380" height="46" rx="8" fill="url(#${u}t)" ${stk(3.6)}/>`;
+  for (let x = 22; x < 380; x += 24) g += `<path d="M${x} 18 L${x + 12} 56 M${x + 24} 18 L${x + 12} 56" stroke="#4a4f78" stroke-width="2"/>`;
+  // chequered neon strip along the top
+  g += `<rect x="14" y="16" width="372" height="12" rx="3" fill="#17123a"/>`;
+  for (let i = 0; i < 31; i++) for (let j = 0; j < 2; j++) if ((i + j) % 2 === 0) g += `<rect x="${14 + i * 12}" y="${16 + j * 6}" width="12" height="6" fill="#f4f6ff"/>`;
+  g += `<rect x="14" y="16" width="372" height="12" rx="3" fill="none" ${stk(2.2)}/>`;
+  g += neon("M18 31 H382", CYAN, 2.2, `${u}n`);
+  // start lights: a panel with five bulbs (3 red, 2 green) + pink accents
+  g += `<rect x="128" y="34" width="144" height="24" rx="10" fill="#17123a" ${stk(3)}/>`;
+  [["#ff3355", 0], ["#ff3355", 1], ["#ff3355", 2], ["#3ddc84", 3], ["#3ddc84", 4]].forEach(([c, i]) => {
+    const x = 146 + i * 27;
+    g += `<circle cx="${x}" cy="46" r="11" fill="${c}" opacity=".5" filter="url(#${u}n)"/><circle cx="${x}" cy="46" r="8" fill="${c}" ${stk(2)}/><circle cx="${x - 2.5}" cy="43.5" r="2.6" fill="#fff" opacity=".85"/>`;
+  });
+  g += neon("M30 50 H112", PINK, 2.4, `${u}n`) + neon("M288 50 H370", PINK, 2.4, `${u}n`);
+  g += neon(star(60, 41, 6, 2, 4), YELLOW, 1.6, `${u}n`) + neon(star(340, 41, 6, 2, 4), YELLOW, 1.6, `${u}n`);
+  return job("assets/img/start_gate.png", W, H, g, defs);
+}
 function carBackJob() { const r = carBack({ u: "cb" }); return job("assets/img/car_back.png", 200, 130, r.body, r.defs); }
 
 /* ============================ ICONS ============================ */
@@ -1390,13 +1422,17 @@ function boxInQuad(L, quad, o) {
 // boxes inside the hood paint / the door panel (portrait x ≤ 0.75 for the hood, ≤ 0.8 for the
 // slanted door strip), plus the exact paint quads (`quads`) for an engine that can sample polygons
 const WASH_DOOR = [-40, 40, 14, 58];   // door panel (taller): rocker → beltline, between the arches
+// portrait side area: the front quarter = the front part of the door + the fender sliver up to the wheel
+// arch (flare outer radius 40 around x 88 leaves x ≤ 48 clear), sill → just above the shoulder crease;
+// the rest of the door projects past the phone crop (x > 0.78) in this framing
+const WASH_SIDE_P = [24, 48, 16, 46];
 const WASH_PAD = { portrait: 16, wide: 12 };   // px inset of the paint quads (≈ a small spot's radius at the edge)
 function washAreas() {
   const P = WASH_LAYOUT.portrait, Wd = WASH_LAYOUT.wide;
   const frac = (L, q) => q.map(([x, y]) => [+((L.tx + x * L.s) / L.W).toFixed(3), +((L.ty + y * L.s) / L.H).toFixed(3)]);
   PV = P.view;
-  const pq0 = [hoodQuad(4), doorQuad(...WASH_DOOR)];
-  const p = [boxInQuad(P, pq0[0], { x: [0.25, 0.75], minH: 0.08, minW: 0.14, pad: WASH_PAD.portrait }), boxInQuad(P, pq0[1], { x: [0.25, 0.8], pad: WASH_PAD.portrait })];
+  const pq0 = [hoodQuad(4), doorQuad(...WASH_SIDE_P)];
+  const p = [boxInQuad(P, pq0[0], { x: [0.25, 0.75], minH: 0.08, minW: 0.14, pad: WASH_PAD.portrait }), boxInQuad(P, pq0[1], { x: [0.22, 0.78], pad: WASH_PAD.portrait })];
   const pq = pq0.map((q) => frac(P, shrinkQuad(q.map(([x, y]) => [x, y]), WASH_PAD.portrait / P.s)));
   PV = Wd.view;
   const wq0 = [hoodQuad(4), doorQuad(...WASH_DOOR)];
@@ -1755,7 +1791,7 @@ const HIDPI = [
 ];
 function build() {
   const jobs = [];
-  jobs.push(carSheet("assets/sheet/car.png", {}), carSheet("assets/sheet/police.png", { police: true }), carBackJob(), policeBack(), policeFront(), cone());
+  jobs.push(carSheet("assets/sheet/car.png", {}), carSheet("assets/sheet/police.png", { police: true }), carBackJob(), policeBack(), policeFront(), startGate(), cone());
   Object.keys(PEOPLE).forEach((id) => jobs.push(personSheet(id), personThumb(id)));
   jobs.push(asphalt(), sidewalk(), grass(), crosswalk(), lane(false), lane(true));
   jobs.push(

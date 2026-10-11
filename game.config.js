@@ -211,7 +211,7 @@ window.GAME = {
           spots: { base: 4, growEvery: 2, max: 9, rubs: 3, size: 150, minGap: 0.12,
                    // the hood top, then the door panel, as perspective QUADS (washAreas() quads in tools/art/neon.cjs)
                    area: [{ quad: [[0.616, 0.618], [0.405, 0.675], [0.262, 0.575], [0.465, 0.522]], margin: 0.05 },
-                         { quad: [[0.8, 0.694], [0.742, 0.702], [0.742, 0.629], [0.8, 0.617]], margin: 0.05 }] },   // TEMP: front fender pending
+                         { quad: [[0.759, 0.694], [0.716, 0.703], [0.716, 0.662], [0.759, 0.653]], margin: 0.05, max: 1 }] },   // front of the door: room for one spot
           // phone held sideways: the whole car in 3/4 view (same areas order: hood, side — washAreas() in neon.cjs)
           wide: { bg: "wash_silver_wide", bgDone: "wash_silver_wide_done", brushRest: { x: 0.82, y: 0.84 },
                   area: [{ quad: [[0.451, 0.631], [0.301, 0.721], [0.201, 0.574], [0.345, 0.491]], margin: 0.05 },
