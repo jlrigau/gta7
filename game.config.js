@@ -137,7 +137,7 @@ window.GAME = {
       billboard: { path: "assets/img/billboard.webp", res: 2 },
       want_gas: { path: "assets/img/want_gas.webp", res: 2 }, parcel: { path: "assets/img/parcel.webp", res: 2 }, target: { path: "assets/img/target.webp", res: 2 }, flag: { path: "assets/img/flag.webp", res: 2 },
       // pseudo-3D race view billboards
-      car_back: { path: "assets/img/car_back.webp", res: 2 }, police_back: { path: "assets/img/police_back.webp", res: 2 }, police_front: { path: "assets/img/police_front.webp", res: 2 },   // race.chase pursuer cone: { path: "assets/img/cone.webp", res: 2 },
+      car_back: { path: "assets/img/car_back.webp", res: 2 }, police_back: { path: "assets/img/police_back.webp", res: 2 }, police_front: { path: "assets/img/police_front.webp", res: 2 }, start_gate: { path: "assets/img/start_gate.webp", res: 2 },   // race.chase pursuer cone: { path: "assets/img/cone.webp", res: 2 },
       bldg_a: { path: "assets/img/bldg_a.webp", res: 2 }, bldg_b: { path: "assets/img/bldg_b.webp", res: 2 },
       // car-wash close-up (hood seen from the front; "_done" = shiny) + mud splats + sponge
       wash_silver: { path: "assets/img/wash_silver.webp", res: 2 }, wash_silver_done: { path: "assets/img/wash_silver_done.webp", res: 2 }, wash_silver_wide: { path: "assets/img/wash_silver_wide.webp", res: 2 }, wash_silver_wide_done: { path: "assets/img/wash_silver_wide_done.webp", res: 2 },
@@ -277,7 +277,7 @@ window.GAME = {
         { name: "Panthère", sprite: "car_back", tint: "#c07cff", color: "#c07cff" },
         { name: "Fusée", sprite: "car_back", tint: "#ff8a3d", color: "#ff8a3d" },
       ],
-      scale: 6.5, hw: 0.34, skill: [0.82, 0.97], gridGap: 6, gridFirst: 4, lanes: [-0.62, 0.62],
+      scale: 6.5, hw: 0.34, skill: [0.82, 0.97], gridGap: 3, gridFirst: 5, startGate: "start_gate", startGateScale: 17, lanes: [-0.62, 0.62],
       rewards: [110, 70, 45, 25, 15, 10],
       placeLabels: ["1er", "2e", "3e", "4e", "5e", "6e"],
       placeMessages: ["{i:trophy} Victoire ! Tu as battu tout le monde !", "{i:star} 2e ! Pas loin de la victoire !", "{i:star} 3e : tu montes sur le podium !", "Tu finis {place}. Double plus de voitures la prochaine fois !"],
