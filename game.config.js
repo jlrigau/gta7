@@ -207,14 +207,14 @@ window.GAME = {
       // CLOSE-UP car wash: zoom on the hood and scrub the mud off with the sponge
       { id: "wash", type: "closeup", label: "Laver", icon: "wash", color: "#3fd0ff", stat: "wash",
         closeup: {
-          bg: "wash_silver", spotSprites: ["mud_a", "mud_b", "mud_c"], brush: "sponge", brushTip: { x: 0.363, y: 0.794 },
+          bg: "wash_silver", spotSprites: ["mud_a", "mud_b", "mud_c"], brush: "sponge", brushTip: { x: 0.363, y: 0.794 }, brushRest: { x: 0.66, y: 0.9 },
           spots: { base: 4, growEvery: 2, max: 9, rubs: 3, size: 150, minGap: 0.12,
                    // the hood top, then the door panel, as perspective QUADS (washAreas() quads in tools/art/neon.cjs)
-                   area: [{ quad: [[0.605, 0.679], [0.384, 0.739], [0.249, 0.645], [0.463, 0.589]], margin: 0.05 },
+                   area: [{ quad: [[0.567, 0.654], [0.347, 0.713], [0.249, 0.645], [0.463, 0.589]], margin: 0.05 },
                          { quad: [[0.76, 0.757], [0.714, 0.767], [0.714, 0.713], [0.761, 0.704]], margin: 0.05, max: 1 }] },   // front of the door: room for one spot
           // phone held sideways: the whole car in 3/4 view (same areas order: hood, side — washAreas() in neon.cjs)
           wide: { bg: "wash_silver_wide", bgDone: "wash_silver_wide_done", brushRest: { x: 0.82, y: 0.84 },
-                  area: [{ quad: [[0.451, 0.631], [0.301, 0.721], [0.218, 0.599], [0.363, 0.515]], margin: 0.05 },
+                  area: [{ quad: [[0.426, 0.598], [0.278, 0.687], [0.218, 0.599], [0.363, 0.515]], margin: 0.05 },
                          { quad: [[0.723, 0.696], [0.511, 0.792], [0.511, 0.68], [0.725, 0.588]], margin: 0.05 }],
                   keepVisible: [{ x: 0.256, y: 0.242, w: 0.119, h: 0.218 }, { x: 0.219, y: 0.365, w: 0.036, h: 0.063 }, { x: 0.176, y: 0.573, w: 0.083, h: 0.293 }] },
           // the girl's face + the car's nose must stay on screen and clear of the HUD (probes/cuwide.cjs)

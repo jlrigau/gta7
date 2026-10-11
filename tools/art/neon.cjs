@@ -1294,7 +1294,7 @@ function carP(B, S, u, done) {
   const C = CARP, L = C.hl, Wh = C.hw;
   const defs = lin(`${u}sd`, [[0, shade(B, 0.22)], [0.55, B], [1, shade(B, -0.3)]]) + lin(`${u}sh`, [[0, shade(B, 0.5)], [1, shade(B, 0.08)]]) +
     lin(`${u}tp`, [[0, shade(B, 0.62)], [1, shade(B, 0.25)]], 0, 0, 1, 1) + lin(`${u}rf`, [[0, shade(B, 0.62)], [1, shade(B, 0.4)]], 0, 0, 1, 1) +
-    lin(`${u}ns`, [[0, shade(B, 0.0)], [1, shade(B, -0.34)]]) + lin(`${u}fl`, [[0, shade(B, 0.3)], [1, shade(B, -0.05)]]) +
+    lin(`${u}ns`, [[0, shade(B, 0.0)], [1, shade(B, -0.34)]]) + lin(`${u}fl`, done ? [[0, shade(B, 0.3)], [1, shade(B, -0.05)]] : [[0, mix(shade(B, 0.1), "#8a6a48", 0.3)], [1, mix(shade(B, -0.15), "#8a6a48", 0.3)]]) +
     lin(`${u}gl`, [[0, "#7a8ce0"], [0.5, "#2a3270"], [1, "#161a40"]], 0, 0, 0.4, 1) + rad(`${u}w`, [[0, "#ffffff"], [0.55, "#c9cfe4"], [1, "#6d7393"]], 0.4, 0.35, 0.7) +
     glow(`${u}g`, 3) + blur(`${u}bl`, 9) + blur(`${u}b2`, 1.2);
   const st = (w) => `stroke="${INK}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
@@ -1340,8 +1340,10 @@ function carP(B, S, u, done) {
     const d = roundPoly(onNose(rectPts(z0, z1, 30, 40), 0.5), 4);
     g += `<path d="${d}" fill="#ffe27a" opacity=".55" filter="url(#${u}g)"/><path d="${d}" fill="#ffe27a" ${st(2)}/><path d="${roundPoly(onNose(rectPts(z0 + 2, z0 + 8, 35, 38), 0.9), 1.5)}" fill="#fff"/>`;
   });
-  g += `<path d="${roundPoly(onNose(rectPts(-7, 7, 20, 27), 0.5), 3)}" fill="#17123a" ${st(2)}/>`;
-  { const a = projP(L + 1, 23.5, -4.5), b = projP(L + 1, 23.5, 4.5); g += `<path d="M${f2(a[0])} ${f2(a[1])} L${f2(b[0])} ${f2(b[1])}" stroke="${S}" stroke-width="1.8" stroke-linecap="round"/>`; }
+  // grille: a chrome-rimmed dark panel between the lamps with three neon bars + a lower intake — reads as the nose
+  g += `<path d="${roundPoly(onNose(rectPts(-9, 9, 17, 29), 0.5), 3)}" fill="#c9cde2" ${st(2)}/><path d="${roundPoly(onNose(rectPts(-7.5, 7.5, 18.5, 27.5), 0.7), 2.5)}" fill="#17123a"/>`;
+  [20.5, 23, 25.5].forEach((y) => { const a = projP(L + 1, y, -6), b = projP(L + 1, y, 6); g += `<path d="M${f2(a[0])} ${f2(a[1])} L${f2(b[0])} ${f2(b[1])}" stroke="${S}" stroke-width="1.5" stroke-linecap="round"/>`; });
+  g += `<path d="${roundPoly(onNose(rectPts(-22, 22, 12.5, 15.5), 0.5), 1.5)}" fill="#17123a" opacity=".7"/>`;
   // near side: neon stripe, door lines + handles
   { // neon side stripe: inside the side band only (ends short of the rounded corners) and clipped to it
     const x0 = -L + C.rc + 4, x1 = L - C.rc - 4, sl = sideLine(x0, x1, 30);
@@ -1386,7 +1388,7 @@ function carP(B, S, u, done) {
   // FRONT layer (drawn after the paint finish): fender flares, wheel wells, near wheels
   [C.wx, -C.wx].forEach((wx) => {
     front += `<path d="${roundPoly(sideArc(wx, C.axle, C.wellR - 1, C.wellR + C.flare, 12, 168), 2.5)}" fill="url(#${u}fl)" ${st(2.4)}/>`;
-    front += `<path d="${pathOf(sideArc(wx, C.axle, C.wellR + C.flare * 0.45, C.wellR + C.flare * 0.75, 55, 125))}" fill="#fff" opacity=".45"/>`;
+    front += `<path d="${pathOf(sideArc(wx, C.axle, C.wellR + C.flare * 0.45, C.wellR + C.flare * 0.75, 55, 125))}" fill="#fff" opacity="${done ? 0.45 : 0.15}"/>`;   // dirty: the flare highlight is dulled too
     const well = []; for (let i = 0; i <= 24; i++) { const a = (2 + 176 * i / 24) * Math.PI / 180; well.push([wx + Math.cos(a) * C.wellR, C.axle + Math.sin(a) * C.wellR]); }
     front += `<path d="${pathOf(onSide(well, 0.8))}" fill="#151228" ${st(2)}/>`;
     front += wheel(wx, -Wh, false);
@@ -1402,7 +1404,7 @@ function carBBox() {
 // hood spot quad: inset i all round + pulled `far` units further in from the far edge (spots stay
 // clear of the girl's hand / the nozzle, which sit behind the far edge); the far strip is where the jet lands
 const HOOD_FAR = { portrait: 10, wide: 16 };
-const hoodSpotQuad = (i, far) => onDeck([[CARP.hood[0] + i, -CARP.hw + CARP.inset + i], [CARP.hl - CARP.inset - i, -CARP.hw + CARP.inset + i], [CARP.hl - CARP.inset - i, CARP.hw - CARP.inset - i - far], [CARP.hood[0] + i, CARP.hw - CARP.inset - i - far]]);
+const hoodSpotQuad = (i, far) => onDeck([[CARP.hood[0] + i, -CARP.hw + CARP.inset + i + 20], [CARP.hl - CARP.inset - i, -CARP.hw + CARP.inset + i + 20], [CARP.hl - CARP.inset - i, CARP.hw - CARP.inset - i - far], [CARP.hood[0] + i, CARP.hw - CARP.inset - i - far]]);
 const hoodQuad = (i) => onDeck([[CARP.hood[0] + i, -CARP.hw + CARP.inset + i], [CARP.hl - CARP.inset - i, -CARP.hw + CARP.inset + i], [CARP.hl - CARP.inset - i, CARP.hw - CARP.inset - i], [CARP.hood[0] + i, CARP.hw - CARP.inset - i]]);
 const doorQuad = (x0, x1, y0, y1) => onSide([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], 0.6);
 const WASH_LAYOUT = {
@@ -1555,13 +1557,17 @@ function washGirl(pose, u, low) {
   g += `<path d="M${cx - 1.5} ${hy + 8} Q${cx + 1} ${hy + 10.5} ${cx - 1} ${hy + 11.5}" fill="none" stroke="${shade(k.skin, -0.35)}" stroke-width="1.8" stroke-linecap="round"/>`;
   g += `<path d="M${cx - 7.5} ${hy + 13.5} Q${cx} ${hy + 23} ${cx + 7.5} ${hy + 13.5} Q${cx} ${hy + 15.5} ${cx - 7.5} ${hy + 13.5} Z" fill="#7a2a3a" ${stk(2.2)}/><ellipse cx="${cx}" cy="${hy + 18.6}" rx="3" ry="1.6" fill="#ff8aa0"/>`;
   g += personHair(k, cx, hy, r, "down", "front", 0);
-  // cap: a soft crown covering the skull (r·0.8 — at r·0.6 hair showed above it and it read as a headband) + a forward bill (crescent, turned 12°); no side/back brim; the star stays
-  const cy0 = hy - r * 0.3, C2 = shade(k.cap, -0.18);
-  g += `<path d="M${cx - r * 1.05} ${cy0} A${r * 1.05} ${r * 0.8} 0 0 1 ${cx + r * 1.05} ${cy0} Q${cx} ${cy0 + r * 0.1} ${cx - r * 1.05} ${cy0} Z" fill="${k.cap}" ${st}/>`;
-  g += `<path d="M${cx - r * 0.55} ${cy0 - r * 0.4} Q${cx} ${cy0 - r * 0.58} ${cx + r * 0.55} ${cy0 - r * 0.4}" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/>`;
-  g += `<path d="${star(cx, cy0 - r * 0.28, r * 0.18, r * 0.08)}" fill="${PINK}" ${stk(1.5)}/>`;
-  g += `<path d="M${cx - r * 0.85} ${cy0 + r * 0.1} Q${cx} ${cy0 + r * 0.5} ${cx + r * 0.85} ${cy0 + r * 0.1} Q${cx} ${cy0 + r * 0.3} ${cx - r * 0.85} ${cy0 + r * 0.1} Z" fill="${shade(k.skin, -0.25)}" opacity=".35"/>`;   // forehead under-shadow
-  g += `<g transform="rotate(-12 ${cx} ${cy0})"><path d="M${cx - r * 0.95} ${cy0} Q${cx} ${cy0 + r * 0.42} ${cx + r * 0.95} ${cy0} Q${cx} ${cy0 + r * 0.18} ${cx - r * 0.95} ${cy0} Z" fill="${C2}" ${st}/></g>`;   // bill: a separate front crescent, turned toward the raised arm
+  // summer cap: a FLAT low crown (starts lower, ry r·0.62 — still covers the skull top) with a centre seam +
+  // a long visor sticking out toward the raised arm (reads as a baseball cap, not a hard hat)
+  const cy0 = hy - r * 0.42, C2 = shade(k.cap, -0.18);
+  g += `<path d="M${cx - r * 1.04} ${cy0} A${r * 1.04} ${r * 0.62} 0 0 1 ${cx + r * 1.04} ${cy0} Q${cx} ${cy0 + r * 0.12} ${cx - r * 1.04} ${cy0} Z" fill="${k.cap}" ${st}/>`;
+  g += `<path d="M${cx} ${cy0 - r * 0.6} Q${cx + r * 0.08} ${cy0 - r * 0.3} ${cx + r * 0.04} ${cy0 + r * 0.05}" fill="none" stroke="${C2}" stroke-width="2"/>`;
+  g += `<path d="M${cx - r * 0.6} ${cy0 - r * 0.38} Q${cx - r * 0.3} ${cy0 - r * 0.56} ${cx - r * 0.08} ${cy0 - r * 0.56}" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/>`;
+  g += `<path d="${star(cx - r * 0.42, cy0 - r * 0.24, r * 0.16, r * 0.07)}" fill="${PINK}" ${stk(1.4)}/>`;
+  g += `<circle cx="${cx}" cy="${f2(cy0 - r * 0.62)}" r="2" fill="${C2}" ${stk(1.2)}/>`;
+  g += `<path d="M${cx - r * 0.8} ${cy0 + r * 0.12} Q${cx} ${cy0 + r * 0.5} ${cx + r * 0.85} ${cy0 + r * 0.12} Q${cx} ${cy0 + r * 0.3} ${cx - r * 0.8} ${cy0 + r * 0.12} Z" fill="${shade(k.skin, -0.25)}" opacity=".35"/>`;   // forehead under-shadow
+  g += `<path d="M${cx - r * 0.75} ${cy0 + r * 0.02} Q${cx + r * 0.2} ${cy0 + r * 0.62} ${cx + r * 1.5} ${cy0 + r * 0.12} Q${cx + r * 1.62} ${cy0 - r * 0.06} ${cx + r * 1.2} ${cy0 - r * 0.04} Q${cx + r * 0.2} ${cy0 + r * 0.22} ${cx - r * 0.75} ${cy0 + r * 0.02} Z" fill="${C2}" ${st}/>`;   // visor, out toward the raised arm
+  g += `<path d="M${cx + r * 0.2} ${cy0 + r * 0.32} Q${cx + r * 0.8} ${cy0 + r * 0.3} ${cx + r * 1.3} ${cy0 + r * 0.1}" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".45"/>`;
   return { defs, body: g, hand: pose === "cheer" ? null : hb, tip, head: [cx, hy - 2], headR: r + 3, armB };
 }
 // outdoor summer neon wash spot: sunset sky, skyline, wall with a neon sign, palms, bunting,
@@ -1639,6 +1645,10 @@ function girlPlace(L, wide) {
   GL.jetLen = best;
   if (best && best < 110) console.warn(`wash jet short: ${best.toFixed(0)} px (${wide ? "wide" : "portrait"})`);   // (110·GL.s ≈ 340 px is not reachable with her behind the hood)
   if (!GL.aimW) { GL.aimW = [C.hl - 4, yTop(C.hl - 4), -10]; console.warn(`wash jet: no downstream target off the hood spot area (${wide ? "wide" : "portrait"}) feet ${GL.x.toFixed(0)} cands ${cands.map(([x, z]) => { const p = im(projP(x, yTop(x), z)); return p.map(Math.round) + (inQ(p) ? "in" : ""); }).join(" | ")}`); }
+  if (wide && GL.aimW) {   // landscape: land ~40 px further into the hood (not on its corner edge)
+    const cxh = (C.hood[0] + C.hl) / 2, d = 40 / L.s, ax = GL.aimW[0], az = GL.aimW[2], n = Math.hypot(cxh - ax, 0 - az) || 1;
+    const x = ax + (cxh - ax) / n * d, z = az + (0 - az) / n * d; GL.aimW = [x, yTop(x), z];
+  }
   GL.gp = (p) => [GL.x + GL.mir * (p[0] - 64) * GL.s, GL.y + (p[1] - 120) * GL.s];
   return GL;
 }
@@ -1705,10 +1715,10 @@ function washScene(v, done, wide) {
   const openSmooth = (pts) => { let d = `M${f2(pts[0][0])} ${f2(pts[0][1])}`; for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)]; d += `C${f2(p1[0] + (p2[0] - p0[0]) / 6)} ${f2(p1[1] + (p2[1] - p0[1]) / 6)} ${f2(p2[0] - (p3[0] - p1[0]) / 6)} ${f2(p2[1] - (p3[1] - p1[1]) / 6)} ${f2(p2[0])} ${f2(p2[1])}`; } return d; };
   const floorA = wide ? [0.065 * W, 0.6 * H] : [0.19 * W, 0.5 * H], loopC = wide ? [0.11 * W, 0.645 * H] : [0.215 * W, 0.555 * H], lr = [wide ? 0.03 * W : 0.032 * W, wide ? 0.022 * H : 0.011 * H];
   const loop = [0, 1, 2, 3, 4, 5].map((k) => { const a = Math.PI * (0.9 + k * 0.38); return [loopC[0] + Math.cos(a) * lr[0], loopC[1] + Math.sin(a) * lr[1]]; });
-  const gunFloor = wide ? [0.05 * W, 0.75 * H] : [0.43 * W, 0.90 * H];   // _done: the gun dropped on the floor (clear of the bucket and the nose)
+  const gunFloor = wide ? [0.18 * W, 0.905 * H] : [0.43 * W, 0.90 * H];   // _done: the gun dropped on the floor (clear of the bucket and the nose)
   const head = [[reel[0], reel[1] - rr * 1.6 + rr * 0.72], [reel[0] + 4, reel[1] + 8], floorA, ...loop];
   const hosePts = done ? head.concat([[(loop[5][0] + gunFloor[0]) / 2, Math.max(loop[5][1], gunFloor[1]) - 10], gunFloor])
-    : wide ? head.concat([[loop[5][0] + 0.01 * W, 0.53 * H], hip])   // up behind her, left of the nose (never into the car outline)
+    : wide ? head.concat([[0.12 * W, 0.5 * H], [0.2 * W, 0.465 * H], foot, hip])   // up the floor BEHIND the car (left of her, above the hood's far edge), then behind the car's far edge to her far hip — never across the nose
     : head.concat([[(loop[5][0] + foot[0]) / 2, Math.max(loop[5][1], foot[1]) + 6], foot, hip]);
   const hoseD = openSmooth(hosePts);
   const hoseStroke = (d) => `<path d="${d}" fill="none" stroke="${INK}" stroke-width="${f2(GL.s * 4.6)}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#3fcf7a" stroke-width="${f2(GL.s * 2.4)}" stroke-linecap="round" stroke-linejoin="round"/>`;
