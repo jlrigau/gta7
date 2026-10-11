@@ -8,7 +8,7 @@ A small **top-down neon-city driving game** (the game itself is in **French**, a
 job** for a big payout and the **police** give chase (wanted level) — outrun them or get a
 **repaint at the garage** to shake them off. Climb the ranks from *Bleu* to *Caïd*.
 
-▶ **[Play GTA 7 · Neon City](https://jlrigau.github.io/gta7/)**
+▶ **[Play GTA 7 · Neon City](https://ludea.ai/gta7/)**
 
 > GTA 7 is built on a **generic, reusable 2D game engine** (Phaser 3, 100% static, no
 > build). The whole game lives in `game.config.js` + assets (all art generated from
