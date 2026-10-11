@@ -137,7 +137,7 @@ window.GAME = {
       billboard: { path: "assets/img/billboard.webp", res: 2 },
       want_gas: { path: "assets/img/want_gas.webp", res: 2 }, parcel: { path: "assets/img/parcel.webp", res: 2 }, target: { path: "assets/img/target.webp", res: 2 }, flag: { path: "assets/img/flag.webp", res: 2 },
       // pseudo-3D race view billboards
-      car_back: { path: "assets/img/car_back.webp", res: 2 }, cone: { path: "assets/img/cone.webp", res: 2 },
+      car_back: { path: "assets/img/car_back.webp", res: 2 }, police_back: { path: "assets/img/police_back.webp", res: 2 },   // race.chase pursuer cone: { path: "assets/img/cone.webp", res: 2 },
       bldg_a: { path: "assets/img/bldg_a.webp", res: 2 }, bldg_b: { path: "assets/img/bldg_b.webp", res: 2 },
       // car-wash close-up (hood seen from the front; "_done" = shiny) + mud splats + sponge
       wash_silver: { path: "assets/img/wash_silver.webp", res: 2 }, wash_silver_done: { path: "assets/img/wash_silver_done.webp", res: 2 }, wash_silver_wide: { path: "assets/img/wash_silver_wide.webp", res: 2 }, wash_silver_wide_done: { path: "assets/img/wash_silver_wide_done.webp", res: 2 },
@@ -201,19 +201,24 @@ window.GAME = {
     actions: [
       { id: "drive", type: "ride", label: "Conduire", icon: "car", color: "#38e0e6", dismountLabel: "Descendre", dismountIcon: "close" },
       { id: "race", type: "race", label: "Course", icon: "flag", color: "#ff4d97" },
+      // race variant: the police chases you to the finish line (race.chase)
+      { id: "poursuite", type: "race", mode: "chase", label: "Poursuite", icon: "police", color: "#4a7bff" },
       { id: "boost", type: "jump", label: "Cascade", icon: "stunt", color: "#ffcf3f" },
       // CLOSE-UP car wash: zoom on the hood and scrub the mud off with the sponge
       { id: "wash", type: "closeup", label: "Laver", icon: "wash", color: "#3fd0ff", stat: "wash",
         closeup: {
           bg: "wash_silver", spotSprites: ["mud_a", "mud_b", "mud_c"], brush: "sponge", brushTip: { x: 0.363, y: 0.794 },
-          spots: { base: 4, growEvery: 2, max: 9, rubs: 3, size: 150, minGap: 0.08,
+          spots: { base: 4, growEvery: 2, max: 9, rubs: 3, size: 150, minGap: 0.12,
                    // the hood top, then the door panel, as perspective QUADS (washAreas() quads in tools/art/neon.cjs)
-                   area: [{ quad: [[0.566, 0.557], [0.389, 0.642], [0.193, 0.529], [0.366, 0.452]], margin: 0.18 },
-                         { quad: [[0.771, 0.577], [0.658, 0.625], [0.659, 0.579], [0.773, 0.531]], margin: 0.12 }] },   // door cut at the phone crop
+                   area: [{ quad: [[0.563, 0.58], [0.323, 0.627], [0.234, 0.533], [0.464, 0.489]], margin: 0.16 },
+                         { quad: [[0.77, 0.6], [0.595, 0.677], [0.594, 0.625], [0.77, 0.548]], margin: 0.1 }] },   // door cut at the phone crop
           // phone held sideways: the whole car in 3/4 view (same areas order: hood, side — washAreas() in neon.cjs)
-          wide: { bg: "wash_silver_wide", bgDone: "wash_silver_wide_done",
-                  area: [{ quad: [[0.405, 0.571], [0.261, 0.657], [0.192, 0.471], [0.327, 0.394]], margin: 0.18 },
-                         { quad: [[0.657, 0.633], [0.466, 0.724], [0.466, 0.633], [0.659, 0.543]], margin: 0.15 }] },
+          wide: { bg: "wash_silver_wide", bgDone: "wash_silver_wide_done", brushRest: { x: 0.82, y: 0.84 },
+                  area: [{ quad: [[0.43, 0.619], [0.26, 0.697], [0.198, 0.548], [0.36, 0.476]], margin: 0.16 },
+                         { quad: [[0.655, 0.731], [0.452, 0.799], [0.452, 0.7], [0.656, 0.634]], margin: 0.12 }],
+                  keepVisible: [{ x: 0.145, y: 0.235, w: 0.12, h: 0.22 }, { x: 0.173, y: 0.556, w: 0.046, h: 0.285 }] },
+          // the girl's face + the car's nose must stay on screen and clear of the HUD (probes/cuwide.cjs)
+          keepVisible: [{ x: 0.304, y: 0.342, w: 0.163, h: 0.117 }, { x: 0.199, y: 0.54, w: 0.067, h: 0.161 }],
           finishParticles: ["sparkle", "star"],
           foam: { colors: ["#ffffff", "#e3f9ff", "#c8f4ff"] },
         },
@@ -251,6 +256,19 @@ window.GAME = {
     ],
     // a REAL race: 5 rival cars to overtake (you start last), ranking, results with a reward per place
     horizon: 0.42,                           // tall phones: more road, less empty sky
+    // CHASE variant ("Poursuite"): the police starts behind and closes in; a clean run escapes, crashes get you caught
+    chase: {
+      name: "la police", sprite: "police_back", scale: 6.5, icon: "police",
+      startGap: 28, skill: [0.9, 1.05], catchGap: 0.8,
+      reward: 90, caughtReward: 5, stat: "chaseEscape",
+      startMessage: "{i:police} La police est à tes trousses ! Fonce jusqu'à l'arrivée sans te faire rattraper !",
+      hitMessage: "Aïe ! La police se rapproche…",
+      caughtMessage: "{i:police} Rattrapé par {name} !",
+      resultsTitle: "{i:police} Poursuite",
+      escapeMessage: "{i:trophy} Tu as semé la police !", escapeHint: "Arrivée en {t} s, sans te faire prendre.",
+      caughtTitle: "{i:police} La police t'a rattrapé !", caughtHint: "Évite les plots : chaque choc te ralentit.",
+      goLabel: "Fonce !",
+    },
     rivals: {
       list: [
         { name: "Vipère", sprite: "car_back", tint: "#5aa6ff", color: "#5aa6ff" },
@@ -410,6 +428,7 @@ window.GAME = {
         { id: "buy1", name: "Nouvelle caisse", desc: "Achète une voiture à la Concession {i:dealer}", check: (s) => (s.creatures || []).some((c) => c.model) },
         { id: "race3", name: "Pilote confirmé", desc: "Gagne 3 courses {i:flag}", check: (s) => (s.stats.raceWin || 0) >= 3 },
         { id: "job12", name: "Transporteur", desc: "Fais 12 livraisons {i:parcel}", check: (s) => (s.stats.jobs || 0) >= 12 },
+        { id: "escape1", name: "Insaisissable", desc: "Sème la police en Poursuite {i:police}", check: (s) => (s.stats.chaseEscape || 0) >= 1 },
       ] },
       { name: "Caïd", goals: [
         { id: "earn1500", name: "Fortune", desc: "Gagne 1500 {i:cash} en tout", check: (s) => (s.stats.earned || 0) >= 1500 },
@@ -426,7 +445,7 @@ window.GAME = {
     "{i:parcel} <b>Livraisons (Dépôt) :</b> suis la flèche jusqu'au <b>colis</b>, récupère-le, puis emmène-le jusqu'à la <b>cible</b> au sol pour être payé.",
     "{i:wanted} <b>Cargaisons sensibles :</b> elles paient gros mais la police te prend en chasse. Sème-la en roulant vite, ou va repeindre ta voiture au {i:garage} <b>Garage</b> (en voiture).",
     "{i:bed} <b>La Planque :</b> c'est là que tu dors pour passer au jour suivant, à pied ou en voiture.",
-    "{i:flag} <b>Course :</b> au volant, « Course » : vue derrière la voiture. Tu pars dernier derrière 5 voitures : touche à gauche ou à droite pour les doubler et éviter les plots. Plus tu finis haut, plus tu gagnes !",
+    "{i:flag} <b>Course :</b> au volant, « Course » : vue derrière la voiture. Tu pars dernier derrière 5 voitures : touche à gauche ou à droite pour les doubler et éviter les plots. Plus tu finis haut, plus tu gagnes ! {i:police} <b>Poursuite :</b> la police part derrière toi, file jusqu'à l'arrivée sans te faire rattraper.",
     "{i:dealer} <b>Concession :</b> achète des voitures plus rapides ({i:speed} vitesse, {i:grip} tenue, {i:range} autonomie).",
     "{i:fuel} <b>Essence :</b> elle baisse en roulant (et pendant les courses). Panne sèche : la voiture roule au ralenti, alors file au volant jusqu'à la <b>station-service</b> pour faire le plein. {i:stunt} <b>Cascade :</b> saute par-dessus une rampe pour un bonus.",
     "{i:wash} <b>Lavage :</b> une voiture se salit de jour en jour ({i:clean} Propreté). Touche-la à pied puis « Laver » : frotte la boue sur le capot avec l'éponge.",
