@@ -208,10 +208,10 @@ window.GAME = {
           bg: "wash_silver", spotSprites: ["mud_a", "mud_b", "mud_c"], brush: "sponge", brushTip: { x: 0.363, y: 0.794 },
           spots: { base: 4, growEvery: 2, max: 9, rubs: 3, size: 150, minGap: 0.08,
                    // the hood top, then the side panel (washAreas() in tools/art/neon.cjs)
-                   area: [{ x: 0.487, y: 0.421, w: 0.303, h: 0.038 }, { x: 0.47, y: 0.535, w: 0.208, h: 0.03 }] },
+                   area: [{ x: 0.272, y: 0.507, w: 0.193, h: 0.093 }, { x: 0.659, y: 0.59, w: 0.141, h: 0.059 }] },
           // phone held sideways: the whole car in 3/4 view (same areas order: hood, side — washAreas() in neon.cjs)
           wide: { bg: "wash_silver_wide", bgDone: "wash_silver_wide_done",
-                  area: [{ x: 0.748, y: 0.463, w: 0.142, h: 0.046 }, { x: 0.355, y: 0.621, w: 0.259, h: 0.153 }] },
+                  area: [{ x: 0.332, y: 0.533, w: 0.143, h: 0.091 }, { x: 0.565, y: 0.628, w: 0.144, h: 0.042 }] },
           finishParticles: ["sparkle", "star"],
           foam: { colors: ["#ffffff", "#e3f9ff", "#c8f4ff"] },
         },
