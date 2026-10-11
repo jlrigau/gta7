@@ -954,6 +954,45 @@ function policeBack() {
   g += `</g>`;
   return job("assets/img/police_back.png", 200, 170, g, r.defs + glow("pbg", 5));
 }
+// The police car seen from the FRONT, driving at the camera (rear-view-mirror pursuer): the
+// same body as carBack() mirrored to a front view (windshield, navy hood + cyan trim + gold star,
+// warm headlights, grille, bumper, blank plate) + the roof light bar; 200×170 frame like police_back.
+function policeFront() {
+  const u = "pfr", B = "#f4f6fc", sw = 3.5, s2 = sw * 0.65;
+  const defs = lin(`${u}b`, [[0, shade(B, 0.45)], [0.5, B], [1, shade(B, -0.25)]]) +
+    lin(`${u}h`, [[0, shade(B, -0.28)], [0.25, shade(B, 0.1)], [0.5, shade(B, 0.5)], [0.75, shade(B, 0.1)], [1, shade(B, -0.28)]], 0, 0, 1, 0) +
+    lin(`${u}g`, [[0, "#5a6cc0"], [0.6, "#1d2350"], [1, "#141838"]]) + lin(`${u}n`, [[0, "#3a4aa8"], [1, "#1f2766"]]) +
+    glow(`${u}gl`, 5) + blur(`${u}bl`, 3);
+  let g = `<g transform="translate(0 40)">`;
+  g += `<ellipse cx="100" cy="119" rx="90" ry="8" fill="#08051a" opacity=".4" filter="url(#${u}bl)"/>`;
+  [[22, 52], [148, 178]].forEach(([a, b]) => { g += `<rect x="${a}" y="88" width="${b - a}" height="34" rx="9" fill="#1e1b30" ${stk(sw)}/><path d="M${a + 6} 112 H${b - 6}" stroke="#4a4766" stroke-width="${s2}" stroke-linecap="round"/>`; });
+  // cabin + windshield (front glass is bigger than the rear window)
+  g += `<path d="M44 58 L60 22 Q63 14 72 14 L128 14 Q137 14 140 22 L156 58 Z" fill="url(#${u}h)" ${stk(sw)}/>`;
+  g += `<path d="M55 55 L67 24 Q69 20 74 20 L126 20 Q131 20 133 24 L145 55 Z" fill="url(#${u}g)" ${stk(s2)}/>`;
+  g += `<path d="M76 24 L94 24 L80 52 L62 52 Z" fill="#9fdcff" opacity=".35"/><path d="M100 24 L106 24 L92 52 L86 52 Z" fill="#9fdcff" opacity=".25"/>`;
+  g += `<path d="M70 50 L96 44" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/><path d="M106 50 L132 44" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`;
+  // lower body + navy hood band + cyan trim + star
+  const body = "M12 72 Q12 56 32 54 L168 54 Q188 56 188 72 L189 98 Q189 110 176 110 L24 110 Q11 110 11 98 Z";
+  g += `<path d="${body}" fill="url(#${u}b)" ${stk(sw)}/>`;
+  g += `<clipPath id="${u}c"><path d="${body}"/></clipPath><g clip-path="url(#${u}c)"><rect x="0" y="50" width="200" height="18" fill="url(#${u}n)"/><path d="M0 68 H200" stroke="${CYAN}" stroke-width="2.6"/></g>`;
+  g += `<path d="${body}" fill="none" ${stk(sw)}/>`;
+  g += `<path d="${star(100, 61, 6, 2.7)}" fill="${YELLOW}" ${stk(1.4)}/>`;
+  // headlights on (warm glow), grille, bumper + blank plate
+  [[18, 64], [136, 182]].forEach(([a, b]) => {
+    g += `<ellipse cx="${(a + b) / 2}" cy="80" rx="${(b - a) * 0.75}" ry="16" fill="#ffd98a" opacity=".55" filter="url(#${u}gl)"/>`;
+    g += `<rect x="${a}" y="73" width="${b - a}" height="14" rx="7" fill="#fff2b0" ${stk(s2)}/><rect x="${a + 5}" y="75.5" width="${(b - a) * 0.4}" height="4" rx="2" fill="#fff"/>`;
+  });
+  g += `<rect x="72" y="74" width="56" height="17" rx="6" fill="#17123a" ${stk(s2)}/>`;
+  [78, 82.5, 87].forEach((y) => { g += `<path d="M78 ${y} H122" stroke="${CYAN}" stroke-width="2" stroke-linecap="round"/>`; });
+  g += `<path d="M14 99 H186" stroke="${shade(B, -0.45)}" stroke-width="${s2}"/>`;
+  g += `<rect x="82" y="96" width="36" height="12" rx="3" fill="#f4f6ff" ${stk(s2)}/>`;
+  // roof light bar: red (left) + blue (right), glowing
+  g += `<circle cx="80" cy="6" r="16" fill="#ff3355" opacity=".55" filter="url(#${u}gl)"/><circle cx="120" cy="6" r="16" fill="#3d8bff" opacity=".55" filter="url(#${u}gl)"/>`;
+  g += `<rect x="60" y="-2" width="80" height="15" rx="7" fill="#2a2d55" ${stk(3)}/><rect x="64" y="1" width="34" height="9" rx="4.5" fill="#ff5a74"/><rect x="102" y="1" width="34" height="9" rx="4.5" fill="#5aa8ff"/>`;
+  g += `<rect x="68" y="2.5" width="14" height="3" rx="1.5" fill="#fff" opacity=".85"/><rect x="106" y="2.5" width="14" height="3" rx="1.5" fill="#fff" opacity=".85"/>`;
+  g += `</g>`;
+  return job("assets/img/police_front.png", 200, 170, g, defs);
+}
 function carBackJob() { const r = carBack({ u: "cb" }); return job("assets/img/car_back.png", 200, 130, r.body, r.defs); }
 
 /* ============================ ICONS ============================ */
@@ -1149,10 +1188,10 @@ const WASH_COLORS = {   // body (config variant colour) + the neon stripe that r
 };
 // car space: x = length (nose +150, tail −150), y = up (ground 0, sill 14, shoulder 48, belt 62,
 // roof 106), z = width (near side −62, far side +62).
-const CARP = { hl: 150, hw: 62, rc: 30, sill: 11, shoulder: 48, belt: 62, roof: 106, inset: 7, dip: 9,
-  axle: 28, wr: 28, wellR: 32, flare: 8, wx: 92,
-  cabBase: [-100, 40, 52, 22], cabTop: [-78, -19, 46, 20], hood: [45, 150] };
-const VIEWS = { portrait: { yaw: 158, elev: 30, dist: 1500, aim: 40 }, wide: { yaw: 158, elev: 26, dist: 1500, aim: 40 } };
+const CARP = { hl: 140, hw: 62, rc: 26, sill: 14, shoulder: 42, belt: 56, roof: 104, inset: 7, dip: 9,
+  axle: 28, wr: 28, wellR: 32, flare: 8, wx: 88,
+  cabBase: [-92, 48, 52, 22], cabTop: [-74, 4, 46, 20], hood: [52, 140] };
+const VIEWS = { portrait: { yaw: 150, elev: 30, dist: 1500, aim: 40 }, wide: { yaw: 150, elev: 26, dist: 1500, aim: 40 } };
 let PV = VIEWS.portrait;
 function projP3(x, y, z) {   // → [screen x, screen y (down), depth], ~car units at the car centre
   const ya = PV.yaw * Math.PI / 180, el = PV.elev * Math.PI / 180, D = PV.dist;
@@ -1216,7 +1255,7 @@ function cabinFaces() {
 function carP(B, S, u, done) {
   const C = CARP, L = C.hl, Wh = C.hw;
   const defs = lin(`${u}sd`, [[0, shade(B, 0.22)], [0.55, B], [1, shade(B, -0.3)]]) + lin(`${u}sh`, [[0, shade(B, 0.5)], [1, shade(B, 0.08)]]) +
-    lin(`${u}tp`, [[0, shade(B, 0.62)], [1, shade(B, 0.25)]], 0, 0, 1, 1) + lin(`${u}rf`, [[0, shade(B, 0.55)], [1, shade(B, 0.22)]], 0, 0, 1, 1) +
+    lin(`${u}tp`, [[0, shade(B, 0.62)], [1, shade(B, 0.25)]], 0, 0, 1, 1) + lin(`${u}rf`, [[0, shade(B, 0.62)], [1, shade(B, 0.4)]], 0, 0, 1, 1) +
     lin(`${u}ns`, [[0, shade(B, 0.0)], [1, shade(B, -0.34)]]) + lin(`${u}fl`, [[0, shade(B, 0.3)], [1, shade(B, -0.05)]]) +
     lin(`${u}gl`, [[0, "#7a8ce0"], [0.5, "#2a3270"], [1, "#161a40"]], 0, 0, 0.4, 1) + rad(`${u}w`, [[0, "#ffffff"], [0.55, "#c9cfe4"], [1, "#6d7393"]], 0.4, 0.35, 0.7) +
     glow(`${u}g`, 3) + blur(`${u}bl`, 9) + blur(`${u}b2`, 1.2);
@@ -1250,22 +1289,25 @@ function carP(B, S, u, done) {
   g += `<path d="${pathOf(shoulder)}" fill="url(#${u}sh)" ${st(3)}/>`;
   g += `<path d="${pathOf(deck)}" fill="url(#${u}tp)" ${st(3.2)}/>`;
   // hood crease at the hood's back edge, trunk crease, twin neon stripes along the hood
-  [[C.hood[0], 0.75], [-112, 0.6]].forEach(([x, k]) => { const a = projP(x, yTop(x), -(Wh - C.inset) * k), b = projP(x, yTop(x), (Wh - C.inset) * k); g += `<path d="M${f2(a[0])} ${f2(a[1])} L${f2(b[0])} ${f2(b[1])}" stroke="${shade(B, -0.28)}" stroke-width="1.6" stroke-linecap="round"/>`; });
+  [[C.hood[0], 0.75], [-C.hl + 38, 0.6]].forEach(([x, k]) => { const a = projP(x, yTop(x), -(Wh - C.inset) * k), b = projP(x, yTop(x), (Wh - C.inset) * k); g += `<path d="M${f2(a[0])} ${f2(a[1])} L${f2(b[0])} ${f2(b[1])}" stroke="${shade(B, -0.28)}" stroke-width="1.6" stroke-linecap="round"/>`; });
   const SC = done ? S : mix(S, "#8a8a9a", 0.4);   // dirty: stripes desaturated 40 %; clean: full neon + glow
   [[-15, -5], [5, 15]].forEach(([z0, z1]) => { const d = pathOf(deckStrip(C.hood[0] + 6, L - C.inset - 4, z0, z1)); if (done) g += `<path d="${d}" fill="${S}" opacity=".55" filter="url(#${u}g)"/>`; g += `<path d="${d}" fill="${SC}" ${st(1.6)}/>`; });
-  // nose: headlights inside the flat part (z ±10..30), grille
-  const circ = (zc, yc, r, e) => { const p = []; for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2; p.push([zc + Math.cos(a) * r, yc + Math.sin(a) * r]); } return pathOf(onNose(p, e)); };
-  [-21, 21].forEach((zc) => {   // round yellow headlights with a glint (like the game's car)
-    g += `<path d="${circ(zc, 37, 11, 0.5)}" fill="#ffe27a" opacity=".55" filter="url(#${u}g)"/><path d="${circ(zc, 37, 9, 0.5)}" fill="#ffe27a" ${st(2)}/><path d="${circ(zc - 3, 40, 3, 0.9)}" fill="#fff"/>`;
+  // nose: wide horizontal headlights (|z| 10..27) + a horizontal grille slot — a friendly face, not a toaster
+  [[-27, -10], [10, 27]].forEach(([z0, z1]) => {
+    const d = roundPoly(onNose(rectPts(z0, z1, 30, 40), 0.5), 4);
+    g += `<path d="${d}" fill="#ffe27a" opacity=".55" filter="url(#${u}g)"/><path d="${d}" fill="#ffe27a" ${st(2)}/><path d="${roundPoly(onNose(rectPts(z0 + 2, z0 + 8, 35, 38), 0.9), 1.5)}" fill="#fff"/>`;
   });
-  g += `<path d="${roundPoly(onNose(rectPts(-7, 7, 24, 40), 0.5), 4)}" fill="#17123a" ${st(2)}/>`;
-  [28, 32, 36].forEach((y) => { const a = projP(L + 1, y, -4.5), b = projP(L + 1, y, 4.5); g += `<path d="M${f2(a[0])} ${f2(a[1])} L${f2(b[0])} ${f2(b[1])}" stroke="${S}" stroke-width="1.8" stroke-linecap="round"/>`; });
+  g += `<path d="${roundPoly(onNose(rectPts(-7, 7, 20, 27), 0.5), 3)}" fill="#17123a" ${st(2)}/>`;
+  { const a = projP(L + 1, 23.5, -4.5), b = projP(L + 1, 23.5, 4.5); g += `<path d="M${f2(a[0])} ${f2(a[1])} L${f2(b[0])} ${f2(b[1])}" stroke="${S}" stroke-width="1.8" stroke-linecap="round"/>`; }
   // near side: neon stripe, door lines + handles
   g += `<path d="${sideLine(-138, 138, 30)}" stroke="${S}" stroke-width="5" stroke-linecap="round" opacity=".5" filter="url(#${u}g)"/><path d="${sideLine(-138, 138, 30)}" stroke="${S}" stroke-width="3.2" stroke-linecap="round"/>`;
-  [[2, 50], [-50, -2]].forEach(([x0, x1]) => {   // each door: a closed rounded panel, beltline → sill, handle inside
-    g += `<path d="${roundPoly(onSide(rectPts(x0, x1, 18, 46), 0.7), 4)}" fill="none" stroke="${shade(B, -0.3)}" stroke-width="1.6"/>`;
-    g += `<path d="${roundPoly(onSide(rectPts(x1 - 18, x1 - 6, 39, 42.5), 0.8), 1.6)}" fill="${shade(B, -0.4)}"/>`;
-  });
+  { // one door per side: rocker → shoulder crease, a short seam up to the window frame, handle inside
+    const x0 = -60, x1 = 46;
+    g += `<path d="${roundPoly(onSide(rectPts(x0, x1, C.sill, C.shoulder), 0.7), 4)}" fill="none" stroke="${shade(B, -0.3)}" stroke-width="1.6"/>`;
+    const a = projP(x1, C.shoulder, -Wh - 0.6), b = projP(x1, C.belt, -Wh + C.inset - 0.3);
+    g += `<path d="M${f2(a[0])} ${f2(a[1])} L${f2(b[0])} ${f2(b[1])}" stroke="${shade(B, -0.3)}" stroke-width="1.6"/>`;
+    g += `<path d="${roundPoly(onSide(rectPts(x1 - 20, x1 - 8, C.shoulder - 7, C.shoulder - 4), 0.8), 1.6)}" fill="${shade(B, -0.4)}"/>`;
+  }
   // cabin (lofted frustum), roof, glass, mirror
   const [bx0, bx1, bz, br] = C.cabBase, [tx0, tx1, tz, tr] = C.cabTop;
   const cb = planRR(bx0, bx1, bz, br, 6), ct = planRR(tx0, tx1, tz, tr, 6);
@@ -1278,10 +1320,13 @@ function carP(B, S, u, done) {
   g += `<path d="M${f2(wp0[0])} ${f2(wp0[1])} L${f2(wp1[0])} ${f2(wp1[1])}" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`;
   cf.sideWins.forEach((q) => { g += `<path d="${roundPoly(q, 5)}" fill="url(#${u}gl)" ${st(2)}/>`; });
   [[0.12, 0.2], [0.62, 0.7]].forEach(([a, b]) => { g += `<path d="${roundPoly([cf.sw(a, 0.3), cf.sw(b, 0.3), cf.sw(b + 0.06, 0.75), cf.sw(a + 0.06, 0.75)], 2)}" fill="#bff6ff" opacity=".28"/>`; });
-  [-1, 1].forEach((sd) => {   // mirrors on both A-pillars
-    const m0 = projP(bx1 - 10, C.belt + 3, sd * (bz + 1)), m1 = projP(bx1 - 9, C.belt + 4.5, sd * (bz + 4.5));   // short pod
-    g += `<path d="M${f2(m0[0])} ${f2(m0[1])} L${f2(m1[0])} ${f2(m1[1])}" stroke="${INK}" stroke-width="7" stroke-linecap="round"/><path d="M${f2(m0[0])} ${f2(m0[1])} L${f2(m1[0])} ${f2(m1[1])}" stroke="${B}" stroke-width="3.6" stroke-linecap="round"/>`;
-  });
+  { // near mirror: a stalk from the A-pillar foot + a rounded housing with a dark glass sliver (the far one is hidden by the cabin)
+    const m0 = projP(bx1 - 8, C.belt + 2, -bz), m1 = projP(bx1 - 8, C.belt + 5, -(bz + 12)), mz = -(bz + 12);
+    g += `<path d="M${f2(m0[0])} ${f2(m0[1])} L${f2(m1[0])} ${f2(m1[1])}" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`;
+    const hp = (x, y) => projP(x, y, mz);
+    g += `<path d="${roundPoly([hp(bx1 - 14, C.belt + 3), hp(bx1 - 2, C.belt + 3), hp(bx1 - 2, C.belt + 10), hp(bx1 - 14, C.belt + 10)], 3)}" fill="${B}" ${st(2)}/>`;
+    g += `<path d="${roundPoly([hp(bx1 - 12, C.belt + 5), hp(bx1 - 9, C.belt + 5), hp(bx1 - 9, C.belt + 8.5), hp(bx1 - 12, C.belt + 8.5)], 1)}" fill="#2a3270"/>`;
+  }
   // FRONT layer (drawn after the paint finish): fender flares, wheel wells, near wheels
   [C.wx, -C.wx].forEach((wx) => {
     front += `<path d="${roundPoly(sideArc(wx, C.axle, C.wellR - 1, C.wellR + C.flare, 12, 168), 2.5)}" fill="url(#${u}fl)" ${st(2.4)}/>`;
@@ -1315,9 +1360,16 @@ const WASH_LAYOUT = {
 })();
 // largest axis-aligned box (fractions of the image) whose corners all lie inside a convex
 // projected quad, optionally limited to x/y ranges and with minimum sizes — grid search
+function shrinkQuad(q, pad) {   // inset a convex quad's edges by `pad` (same units) — keeps whole spots on the paint
+  const n = q.length, cx = q.reduce((a, p) => a + p[0], 0) / n, cy = q.reduce((a, p) => a + p[1], 0) / n;
+  const lines = q.map((a, i) => { const b = q[(i + 1) % n]; let nx = b[1] - a[1], ny = -(b[0] - a[0]); const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l; if ((cx - a[0]) * nx + (cy - a[1]) * ny < 0) { nx = -nx; ny = -ny; } return [a[0] + nx * pad, a[1] + ny * pad, b[0] + nx * pad, b[1] + ny * pad]; });
+  return lines.map((l1, i) => { const l0 = lines[(i - 1 + n) % n]; const [x1, y1, x2, y2] = l0, [x3, y3, x4, y4] = l1; const d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4) || 1e-9; const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / d; return [x1 + t * (x2 - x1), y1 + t * (y2 - y1)]; });
+}
 function boxInQuad(L, quad, o) {
   o = o || {};
-  const q = quad.map(([x, y]) => [(L.tx + x * L.s) / L.W, (L.ty + y * L.s) / L.H]);
+  let qp = quad.map(([x, y]) => [L.tx + x * L.s, L.ty + y * L.s]);
+  if (o.pad) qp = shrinkQuad(qp, o.pad);
+  const q = qp.map(([x, y]) => [x / L.W, y / L.H]);
   const inside = (x, y) => { let sg = 0; for (let i = 0; i < 4; i++) { const a = q[i], b = q[(i + 1) % 4], c = (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]); if (c !== 0) { if (sg && Math.sign(c) !== sg) return false; sg = Math.sign(c); } } return true; };
   const xs = q.map((p) => p[0]), ys = q.map((p) => p[1]), N = 36;
   const X0 = Math.max(Math.min(...xs), (o.x || [0, 1])[0]), X1 = Math.min(Math.max(...xs), (o.x || [0, 1])[1]), Y0 = Math.max(Math.min(...ys), (o.y || [0, 1])[0]), Y1 = Math.min(Math.max(...ys), (o.y || [0, 1])[1]);
@@ -1337,16 +1389,19 @@ function boxInQuad(L, quad, o) {
 // spot-centre regions (fractions of each image), [hood TOP, door panel]: the largest axis-aligned
 // boxes inside the hood paint / the door panel (portrait x ≤ 0.75 for the hood, ≤ 0.8 for the
 // slanted door strip), plus the exact paint quads (`quads`) for an engine that can sample polygons
-const WASH_DOOR = [-50, 50, 18, 46];   // door panel: between the fender flares (arch inner edge ±52), rocker → beltline
+const WASH_DOOR = [-40, 40, 14, 58];   // door panel (taller): rocker → beltline, between the arches
+const WASH_PAD = { portrait: 16, wide: 14 };   // px inset of the paint quads (≈ a small spot's radius at the edge)
 function washAreas() {
   const P = WASH_LAYOUT.portrait, Wd = WASH_LAYOUT.wide;
   const frac = (L, q) => q.map(([x, y]) => [+((L.tx + x * L.s) / L.W).toFixed(3), +((L.ty + y * L.s) / L.H).toFixed(3)]);
   PV = P.view;
-  const p = [boxInQuad(P, hoodQuad(9), { x: [0.25, 0.75], minH: 0.08, minW: 0.14 }), boxInQuad(P, doorQuad(...WASH_DOOR), { x: [0.25, 0.8] })];
-  const pq = [frac(P, hoodQuad(9)), frac(P, doorQuad(...WASH_DOOR))];
+  const pq0 = [hoodQuad(4), doorQuad(...WASH_DOOR)];
+  const p = [boxInQuad(P, pq0[0], { x: [0.25, 0.75], minH: 0.08, minW: 0.14, pad: WASH_PAD.portrait }), boxInQuad(P, pq0[1], { x: [0.25, 0.8], pad: WASH_PAD.portrait })];
+  const pq = pq0.map((q) => frac(P, shrinkQuad(q.map(([x, y]) => [x, y]), WASH_PAD.portrait / P.s)));
   PV = Wd.view;
-  const w = [boxInQuad(Wd, hoodQuad(9), { y: [0.2, 0.8], minH: 0.07, minW: 0.14 }), boxInQuad(Wd, doorQuad(...WASH_DOOR), { y: [0.2, 0.8] })];
-  const wq = [frac(Wd, hoodQuad(9)), frac(Wd, doorQuad(...WASH_DOOR))];
+  const wq0 = [hoodQuad(4), doorQuad(...WASH_DOOR)];
+  const w = [boxInQuad(Wd, wq0[0], { y: [0.2, 0.8], minH: 0.07, minW: 0.14, pad: WASH_PAD.wide }), boxInQuad(Wd, wq0[1], { y: [0.2, 0.8], pad: WASH_PAD.wide })];
+  const wq = wq0.map((q) => frac(Wd, shrinkQuad(q, WASH_PAD.wide / Wd.s)));
   PV = VIEWS.portrait;
   return { portrait: p, wide: w, quads: { portrait: pq, wide: wq }, keepVisible: { portrait: washKeepVisible(false), wide: washKeepVisible(true) } };
 }
@@ -1670,7 +1725,7 @@ const HIDPI = [
 ];
 function build() {
   const jobs = [];
-  jobs.push(carSheet("assets/sheet/car.png", {}), carSheet("assets/sheet/police.png", { police: true }), carBackJob(), policeBack(), cone());
+  jobs.push(carSheet("assets/sheet/car.png", {}), carSheet("assets/sheet/police.png", { police: true }), carBackJob(), policeBack(), policeFront(), cone());
   Object.keys(PEOPLE).forEach((id) => jobs.push(personSheet(id), personThumb(id)));
   jobs.push(asphalt(), sidewalk(), grass(), crosswalk(), lane(false), lane(true));
   jobs.push(

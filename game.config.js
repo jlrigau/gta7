@@ -137,7 +137,7 @@ window.GAME = {
       billboard: { path: "assets/img/billboard.webp", res: 2 },
       want_gas: { path: "assets/img/want_gas.webp", res: 2 }, parcel: { path: "assets/img/parcel.webp", res: 2 }, target: { path: "assets/img/target.webp", res: 2 }, flag: { path: "assets/img/flag.webp", res: 2 },
       // pseudo-3D race view billboards
-      car_back: { path: "assets/img/car_back.webp", res: 2 }, police_back: { path: "assets/img/police_back.webp", res: 2 },   // race.chase pursuer cone: { path: "assets/img/cone.webp", res: 2 },
+      car_back: { path: "assets/img/car_back.webp", res: 2 }, police_back: { path: "assets/img/police_back.webp", res: 2 }, police_front: { path: "assets/img/police_front.webp", res: 2 },   // race.chase pursuer cone: { path: "assets/img/cone.webp", res: 2 },
       bldg_a: { path: "assets/img/bldg_a.webp", res: 2 }, bldg_b: { path: "assets/img/bldg_b.webp", res: 2 },
       // car-wash close-up (hood seen from the front; "_done" = shiny) + mud splats + sponge
       wash_silver: { path: "assets/img/wash_silver.webp", res: 2 }, wash_silver_done: { path: "assets/img/wash_silver_done.webp", res: 2 }, wash_silver_wide: { path: "assets/img/wash_silver_wide.webp", res: 2 }, wash_silver_wide_done: { path: "assets/img/wash_silver_wide_done.webp", res: 2 },
@@ -258,7 +258,7 @@ window.GAME = {
     horizon: 0.42,                           // tall phones: more road, less empty sky
     // CHASE variant ("Poursuite"): the police starts behind and closes in; a clean run escapes, crashes get you caught
     chase: {
-      name: "la police", sprite: "police_back", scale: 6.5, icon: "police",
+      name: "la police", sprite: "police_back", front: "police_front", scale: 6.5, icon: "police",
       startGap: 28, skill: [0.9, 1.05], catchGap: 0.8,
       reward: 90, caughtReward: 5, stat: "chaseEscape",
       startMessage: "{i:police} La police est à tes trousses ! Fonce jusqu'à l'arrivée sans te faire rattraper !",
