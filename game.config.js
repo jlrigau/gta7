@@ -78,6 +78,7 @@ window.GAME = {
     wrench: "assets/ui/icons/wrench.webp", speed: "assets/ui/icons/speed.webp", grip: "assets/ui/icons/grip.webp",
     range: "assets/ui/icons/range.webp", stunt: "assets/ui/icons/stunt.webp", bed: "assets/ui/icons/bed.webp",
     city: "assets/ui/icons/city.webp", quit: "assets/ui/icons/quit.webp", left: "assets/ui/icons/left.webp", right: "assets/ui/icons/right.webp",
+    wash: "assets/ui/icons/wash.webp", clean: "assets/ui/icons/clean.webp",
     timer: "assets/ui/icons/timer.webp", distance: "assets/ui/icons/distance.webp",
   },
 
@@ -138,6 +139,14 @@ window.GAME = {
       // pseudo-3D race view billboards
       car_back: { path: "assets/img/car_back.webp", res: 2 }, cone: { path: "assets/img/cone.webp", res: 2 },
       bldg_a: { path: "assets/img/bldg_a.webp", res: 2 }, bldg_b: { path: "assets/img/bldg_b.webp", res: 2 },
+      // car-wash close-up (hood seen from the front; "_done" = shiny) + mud splats + sponge
+      wash_silver: { path: "assets/img/wash_silver.webp", res: 2 }, wash_silver_done: { path: "assets/img/wash_silver_done.webp", res: 2 },
+      wash_red: { path: "assets/img/wash_red.webp", res: 2 }, wash_red_done: { path: "assets/img/wash_red_done.webp", res: 2 },
+      wash_blue: { path: "assets/img/wash_blue.webp", res: 2 }, wash_blue_done: { path: "assets/img/wash_blue_done.webp", res: 2 },
+      wash_yellow: { path: "assets/img/wash_yellow.webp", res: 2 }, wash_yellow_done: { path: "assets/img/wash_yellow_done.webp", res: 2 },
+      wash_green: { path: "assets/img/wash_green.webp", res: 2 }, wash_green_done: { path: "assets/img/wash_green_done.webp", res: 2 },
+      wash_purple: { path: "assets/img/wash_purple.webp", res: 2 }, wash_purple_done: { path: "assets/img/wash_purple_done.webp", res: 2 },
+      mud_a: "assets/img/mud_a.webp", mud_b: "assets/img/mud_b.webp", mud_c: "assets/img/mud_c.webp", sponge: "assets/img/sponge.webp",
     },
     sheets: {
       player_man: { path: "assets/sheet/player_man.webp", frameWidth: 128, frameHeight: 128, res: 2 },
@@ -177,21 +186,34 @@ window.GAME = {
     showBars: true,
     nameY: 30, nameSize: 15,
     variantLabel: "Couleur",
-    needs: [{ id: "fuel", icon: "fuel", label: "Essence", start: 100, perDay: 0 }],
+    needs: [{ id: "fuel", icon: "fuel", label: "Essence", start: 100, perDay: 0 },
+            { id: "clean", icon: "clean", label: "Propreté", start: 60, perDay: -25 }],   // gets dirty day after day → "Laver"
     // low-fuel warning bubble
     wantBubble: { sprite: "want_gas", need: "fuel", below: 30, intermittent: true, scale: 0.55, lift: 18, showFor: 2.4, hideMin: 5, hideMax: 11 },
     variants: [
-      { id: "silver", name: "Argent", color: "#dcdce4" },
-      { id: "red", name: "Rouge", color: "#e24a4a", tint: "#ff5a5a" },
-      { id: "blue", name: "Bleue", color: "#4a96f0", tint: "#5aa6ff" },
-      { id: "yellow", name: "Jaune", color: "#facd46", tint: "#ffd84a" },
-      { id: "green", name: "Verte", color: "#5ac878", tint: "#6ad888" },
-      { id: "purple", name: "Violette", color: "#b06cf0", tint: "#c07cff" },
+      { id: "silver", name: "Argent", color: "#dcdce4" , closeupBg: "wash_silver", closeupBgDone: "wash_silver_done" },
+      { id: "red", name: "Rouge", color: "#e24a4a", tint: "#ff5a5a" , closeupBg: "wash_red", closeupBgDone: "wash_red_done" },
+      { id: "blue", name: "Bleue", color: "#4a96f0", tint: "#5aa6ff" , closeupBg: "wash_blue", closeupBgDone: "wash_blue_done" },
+      { id: "yellow", name: "Jaune", color: "#facd46", tint: "#ffd84a" , closeupBg: "wash_yellow", closeupBgDone: "wash_yellow_done" },
+      { id: "green", name: "Verte", color: "#5ac878", tint: "#6ad888" , closeupBg: "wash_green", closeupBgDone: "wash_green_done" },
+      { id: "purple", name: "Violette", color: "#b06cf0", tint: "#c07cff" , closeupBg: "wash_purple", closeupBgDone: "wash_purple_done" },
     ],
     actions: [
       { id: "drive", type: "ride", label: "Conduire", icon: "car", color: "#38e0e6", dismountLabel: "Descendre", dismountIcon: "close" },
       { id: "race", type: "race", label: "Course", icon: "flag", color: "#ff4d97" },
       { id: "boost", type: "jump", label: "Cascade", icon: "stunt", color: "#ffcf3f" },
+      // CLOSE-UP car wash: zoom on the hood and scrub the mud off with the sponge
+      { id: "wash", type: "closeup", label: "Laver", icon: "wash", color: "#3fd0ff", stat: "wash",
+        closeup: {
+          bg: "wash_silver", spotSprites: ["mud_a", "mud_b", "mud_c"], brush: "sponge", brushTip: { x: 0.363, y: 0.794 },
+          spots: { base: 4, growEvery: 2, max: 9, rubs: 3, size: 150, minGap: 0.08,
+                   // left & right halves of the painted hood (between the panel edges and the stripes)
+                   area: [{ x: 0.294, y: 0.369, w: 0.137, h: 0.269 }, { x: 0.569, y: 0.369, w: 0.137, h: 0.269 }] },
+          finishParticles: ["sparkle", "star"],
+          foam: { colors: ["#ffffff", "#e3f9ff", "#c8f4ff"] },
+        },
+        effects: { clean: 100 }, reward: 6,
+        message: "{i:sparkle} {name} brille comme neuve !" },
     ],
     ride: {
       fatigueNeed: "fuel", hideRider: true,
@@ -348,7 +370,7 @@ window.GAME = {
 
   /* ---- Ranks (progression) ---- */
   objectives: {
-    extraStats: ["ride", "jump", "jobs", "raceWin", "earned"],
+    extraStats: ["ride", "jump", "jobs", "raceWin", "earned", "wash"],
     levels: [
       { name: "Bleu", goals: [
         { id: "drive1", name: "Première virée", desc: "Monte dans une voiture {i:car}", check: (s) => (s.stats.ride || 0) >= 1 },
@@ -359,6 +381,7 @@ window.GAME = {
         { id: "job5", name: "Livreur", desc: "Fais 5 livraisons {i:parcel}", check: (s) => (s.stats.jobs || 0) >= 5 },
         { id: "earn300", name: "Premiers billets", desc: "Gagne 300 {i:cash} en tout", check: (s) => (s.stats.earned || 0) >= 300 },
         { id: "stunt3", name: "Cascadeur", desc: "Réussis 3 cascades {i:stunt}", check: (s) => (s.stats.jump || 0) >= 3 },
+        { id: "wash3", name: "Carrosserie nickel", desc: "Lave 3 fois une voiture {i:wash}", check: (s) => (s.stats.wash || 0) >= 3 },
       ] },
       { name: "As du volant", goals: [
         { id: "buy1", name: "Nouvelle caisse", desc: "Achète une voiture à la Concession {i:dealer}", check: (s) => (s.creatures || []).some((c) => c.model) },
@@ -383,6 +406,7 @@ window.GAME = {
     "{i:flag} <b>Course :</b> au volant, « Course » : vue derrière la voiture. Touche à gauche ou à droite pour tourner, évite les plots et rejoins l'arrivée avant le chrono.",
     "{i:dealer} <b>Concession :</b> achète des voitures plus rapides ({i:speed} vitesse, {i:grip} tenue, {i:range} autonomie).",
     "{i:fuel} <b>Essence :</b> elle baisse en roulant (et pendant les courses). Panne sèche : la voiture roule au ralenti, alors file au volant jusqu'à la <b>station-service</b> pour faire le plein. {i:stunt} <b>Cascade :</b> saute par-dessus une rampe pour un bonus.",
+    "{i:wash} <b>Lavage :</b> une voiture se salit de jour en jour ({i:clean} Propreté). Touche-la à pied puis « Laver » : frotte la boue sur le capot avec l'éponge.",
     "{i:goals} <b>Grades :</b> Bleu → Chauffeur → As du volant → Caïd. Sauvegarde automatique.",
   ],
 };

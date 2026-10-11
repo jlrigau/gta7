@@ -159,35 +159,53 @@ function carBack(o) {
   return { defs, body: g };
 }
 
-// The same car in PROFILE (facing right) in a 320×120 box. opts: { body, stripe, sw, u, glass }
+// Map the y of every point of an ABSOLUTE M/L/Q/C/T/S/V path through fy (H, Z untouched).
+function mapY(d, fy) {
+  const toks = d.match(/[A-Za-z]|-?\d*\.?\d+(?:e-?\d+)?/g);
+  let out = "", cmd = "", i = 0;
+  for (const t of toks) {
+    if (/[A-Za-z]/.test(t)) { cmd = t; i = 0; out += t; continue; }
+    let v = +t;
+    if (cmd === "V" || ("MLQCTS".includes(cmd) && i % 2 === 1)) v = fy(v);
+    out += (i ? " " : "") + f2(v); i++;
+  }
+  return out;
+}
+// The same car in PROFILE (facing right) in a 320×120 box. opts: { body, stripe, sw, u, glass,
+//   hk (body height factor about the axle line y 98 — chunkier close-up car), wk (wheel size
+//   factor), noShine }. Defaults draw exactly the classic profile. Returns bodyD
+//   (the body outline, for clip paths) and Y (design y → drawn y).
 function carSide(o) {
   const u = o.u || "cs", B = o.body || "#ff4fa0", sw = o.sw || 4, s2 = sw * 0.65, S = o.stripe || CYAN;
+  const hk = o.hk || 1, wk = o.wk || 1;
+  const Y = hk === 1 ? (y) => y : (y) => +f2(98 - (98 - y) * hk);
+  const T = hk === 1 ? (d) => d : (d) => mapY(d, Y);
   const defs = lin(`${u}b`, [[0, shade(B, 0.45)], [0.45, B], [1, shade(B, -0.35)]]) +
     lin(`${u}g`, [[0, "#4a5ba8"], [0.6, "#1d2350"], [1, "#141838"]]) +
     rad(`${u}w`, [[0, "#ffffff"], [0.55, "#c9cfe4"], [1, "#6d7393"]], 0.4, 0.35, 0.7) + glow(`${u}gl`, 3) + blur(`${u}bl`, 3);
-  let g = `<ellipse cx="160" cy="114" rx="148" ry="6" fill="#08051a" opacity=".45" filter="url(#${u}bl)"/>`;
-  const body = `M18 88 Q14 66 36 62 L96 54 Q120 26 160 24 L198 24 Q226 26 250 52 L292 58 Q308 62 306 82 L304 94 Q302 100 294 100 L24 100 Q14 98 18 88 Z`;
+  let g = `<ellipse cx="160" cy="${98 + 16 * wk}" rx="148" ry="6" fill="#08051a" opacity=".45" filter="url(#${u}bl)"/>`;
+  const body = T(`M18 88 Q14 66 36 62 L96 54 Q120 26 160 24 L198 24 Q226 26 250 52 L292 58 Q308 62 306 82 L304 94 Q302 100 294 100 L24 100 Q14 98 18 88 Z`);
   g += `<path d="${body}" fill="url(#${u}b)" ${stk(sw)}/>`;
   // windows
-  g += `<path d="M110 54 Q128 32 158 31 L174 31 L174 54 Z" fill="url(#${u}g)" ${stk(s2)}/>`;
-  g += `<path d="M182 31 L198 31 Q222 33 238 54 L182 54 Z" fill="url(#${u}g)" ${stk(s2)}/>`;
-  g += `<path d="M128 50 L146 34 L156 34 L138 50 Z M196 50 L208 34 L214 35 L203 50 Z" fill="#9fdcff" opacity=".4"/>`;
+  g += `<path d="${T("M110 54 Q128 32 158 31 L174 31 L174 54 Z")}" fill="url(#${u}g)" ${stk(s2)}/>`;
+  g += `<path d="${T("M182 31 L198 31 Q222 33 238 54 L182 54 Z")}" fill="url(#${u}g)" ${stk(s2)}/>`;
+  g += `<path d="${T("M128 50 L146 34 L156 34 L138 50 Z M196 50 L208 34 L214 35 L203 50 Z")}" fill="#9fdcff" opacity=".4"/>`;
   // shine + neon stripe + door
-  g += `<path d="M40 66 Q120 58 250 58 L292 63" fill="none" stroke="#fff" stroke-width="${s2}" stroke-linecap="round" opacity=".75"/>`;
-  g += `<path d="M24 80 L300 78" stroke="${S}" stroke-width="${sw * 1.3}" stroke-linecap="round" opacity=".55" filter="url(#${u}gl)"/><path d="M24 80 L300 78" stroke="${S}" stroke-width="${sw * 0.9}" stroke-linecap="round"/>`;
-  g += `<path d="M176 56 L178 98 M112 58 L110 98" stroke="${shade(B, -0.45)}" stroke-width="${s2 * 0.8}"/><rect x="186" y="64" width="16" height="4" rx="2" fill="${shade(B, -0.4)}"/>`;
+  if (!o.noShine) g += `<path d="${T("M40 66 Q120 58 250 58 L292 63")}" fill="none" stroke="#fff" stroke-width="${s2}" stroke-linecap="round" opacity=".75"/>`;
+  g += `<path d="${T("M24 80 L300 78")}" stroke="${S}" stroke-width="${sw * 1.3}" stroke-linecap="round" opacity=".55" filter="url(#${u}gl)"/><path d="${T("M24 80 L300 78")}" stroke="${S}" stroke-width="${sw * 0.9}" stroke-linecap="round"/>`;
+  g += `<path d="${T("M176 56 L178 98 M112 58 L110 98")}" stroke="${shade(B, -0.45)}" stroke-width="${s2 * 0.8}"/><rect x="186" y="${Y(64)}" width="16" height="4" rx="2" fill="${shade(B, -0.4)}"/>`;
   // lights
-  g += `<path d="M290 62 Q304 64 305 74 L292 72 Z" fill="#fff6c8" ${stk(s2)}/><ellipse cx="300" cy="69" rx="10" ry="6" fill="#fff6c8" opacity=".5" filter="url(#${u}gl)"/>`;
-  g += `<path d="M20 70 Q20 64 30 63 L32 74 L20 76 Z" fill="#ff2e5e" ${stk(s2)}/>`;
-  g += `<path d="M26 58 L56 56 L52 62 L30 64 Z" fill="${shade(B, -0.3)}" ${stk(s2)}/>`;   // spoiler
+  g += `<path d="${T("M290 62 Q304 64 305 74 L292 72 Z")}" fill="#fff6c8" ${stk(s2)}/><ellipse cx="300" cy="${Y(69)}" rx="10" ry="6" fill="#fff6c8" opacity=".5" filter="url(#${u}gl)"/>`;
+  g += `<path d="${T("M20 70 Q20 64 30 63 L32 74 L20 76 Z")}" fill="#ff2e5e" ${stk(s2)}/>`;
+  g += `<path d="${T("M26 58 L56 56 L52 62 L30 64 Z")}" fill="${shade(B, -0.3)}" ${stk(s2)}/>`;   // spoiler
   // wheels (dark wells first so the arches read)
   [82, 246].forEach((x) => {
-    g += `<circle cx="${x}" cy="96" r="28" fill="#151228"/>`;
-    g += `<circle cx="${x}" cy="98" r="21" fill="#1e1b30" ${stk(sw)}/><circle cx="${x}" cy="98" r="12" fill="url(#${u}w)" ${stk(s2)}/>`;
-    for (let k = 0; k < 5; k++) { const a = k * 1.2566 - 1.57; g += `<path d="M${x} 98 L${f2(x + Math.cos(a) * 10)} ${f2(98 + Math.sin(a) * 10)}" stroke="#8a90aa" stroke-width="${s2 * 0.8}" stroke-linecap="round"/>`; }
-    g += `<circle cx="${x}" cy="98" r="3.6" fill="${S}" ${stk(s2 * 0.6)}/>`;
+    g += `<circle cx="${x}" cy="96" r="${28 * wk}" fill="#151228"/>`;
+    g += `<circle cx="${x}" cy="98" r="${21 * wk}" fill="#1e1b30" ${stk(sw)}/><circle cx="${x}" cy="98" r="${12 * wk}" fill="url(#${u}w)" ${stk(s2)}/>`;
+    for (let k = 0; k < 5; k++) { const a = k * 1.2566 - 1.57; g += `<path d="M${x} 98 L${f2(x + Math.cos(a) * 10 * wk)} ${f2(98 + Math.sin(a) * 10 * wk)}" stroke="#8a90aa" stroke-width="${s2 * 0.8}" stroke-linecap="round"/>`; }
+    g += `<circle cx="${x}" cy="98" r="${3.6 * wk}" fill="${S}" ${stk(s2 * 0.6)}/>`;
   });
-  return { defs, body: g };
+  return { defs, body: g, bodyD: body, Y };
 }
 
 /* ============================ PEOPLE ============================ */
@@ -998,6 +1016,16 @@ const GAME_ICONS = {
     let b = `<path d="M30 120 L52 40 H76 L98 120 Z" fill="#3a3f78" ${st7()}/><path d="M64 46 V58 M64 70 V86 M64 98 V116" stroke="${P.gold}" stroke-width="6" stroke-linecap="round"/>`;
     b += `<path d="M64 76 Q40 50 40 34 Q40 10 64 10 Q88 10 88 34 Q88 50 64 76 Z" fill="${f}" ${st7()}/><circle cx="64" cy="34" r="10" fill="#fff" ${st7(5)}/>${IK.shine("M50 30 Q52 20 60 18")}`;
     return { defs: d, body: b }; },
+  wash: () => { const [d, f] = IK.fill("#ffd23c"); const [d2, fb] = IK.fill("#5ad0ff");
+    let b = `<g transform="rotate(-14 58 76)"><path d="M14 60 Q12 44 30 44 H86 Q104 44 102 60 V92 Q104 108 86 108 H30 Q12 108 14 92 Z" fill="${f}" ${st7()}/>`;
+    b += `<circle cx="34" cy="74" r="5" fill="#d9921a"/><circle cx="62" cy="88" r="5.5" fill="#d9921a"/><circle cx="82" cy="70" r="4.5" fill="#d9921a"/>`;
+    b += [[24, 44, 13], [46, 38, 16], [70, 40, 14], [92, 44, 12]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" ${st7(6)}/>`).join("") + `<path d="M18 46 H98" stroke="#fff" stroke-width="12" stroke-linecap="round"/></g>`;
+    b += `<circle cx="104" cy="26" r="15" fill="${fb}" ${st7(6)}/><path d="M97 21 Q99 15 106 14" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="20" cy="22" r="10" fill="${fb}" ${st7(5)}/>`;
+    return { defs: d + d2, body: b }; },
+  clean: () => { const r = carSide({ body: PINK, stripe: CYAN, sw: 13, u: "icl", hk: 1.42, wk: 1.2 });
+    let b = `<g transform="translate(6 60) scale(0.365)">${r.body}</g>`;
+    b += `<path d="${star(98, 24, 20, 6, 4)}" fill="${P.gold}" ${st7(4)}/><path d="${star(32, 22, 12, 4, 4)}" fill="#fff" ${st7(4)}/><path d="${star(66, 12, 8, 2.6, 4)}" fill="#bff6ff" ${st7(3)}/>`;
+    return { defs: r.defs, body: b }; },
 };
 function gameIcons() { return Object.entries(GAME_ICONS).map(([n, fn]) => { const r = fn(); return IK.job(`assets/ui/icons/${n}.png`, r.body, r.defs); }); }
 
@@ -1090,11 +1118,216 @@ function splash() {
   return K.job("assets/img/splash.png", W, H, g, defs);
 }
 
+/* ============================ CAR WASH CLOSE-UP ============================ */
+// 900×1300 portrait backdrop (cover-fit: a 390×844 phone shows x ≈ 0.17–0.83, a short Safari
+// screen x ≈ 0.08–0.92). A close-up of the car's HOOD seen from the front and slightly above:
+// windshield + wiper at the top, the painted hood in the middle (twin stripes in the variant's
+// neon stripe colour), headlights + grille + bumper at the bottom, wash bay around it.
+const WASH = { W: 900, H: 1300, cx: 450, ground: 1168 };
+const WASH_COLORS = {   // body (config variant colour) + the neon stripe that reads on it
+  silver: ["#dcdce4", CYAN], red: ["#e24a4a", YELLOW], blue: ["#4a96f0", YELLOW],
+  yellow: ["#facd46", PINK], green: ["#5ac878", PINK], purple: ["#b06cf0", CYAN],
+};
+// hood panel (inside the shut lines): top edge y 422 (x ±208), front lip y ≈ 900 (x ±268)
+const HOOD = { top: 422, topHw: 208, lip: 900, lipHw: 268 };
+// spot-centre regions: left + right halves of the painted hood (between the shut lines and the
+// stripes, inset so a spot stays on the paint); fractions of the image
+function washAreas() {
+  const { W, H, cx } = WASH, r = (x0, y0, x1, y1) => ({ x: +(x0 / W).toFixed(3), y: +(y0 / H).toFixed(3), w: +((x1 - x0) / W).toFixed(3), h: +((y1 - y0) / H).toFixed(3) });
+  return [r(cx - 185, 480, cx - 62, 830), r(cx + 62, 480, cx + 185, 830)];
+}
+function washBay(u, R) {   // the neon wash bay behind the car (no car)
+  const { W, H, ground } = WASH, fl = 850;                       // wall/floor junction
+  let g = `<rect width="${W}" height="${H}" fill="url(#${u}wall)"/>`;
+  // back wall tiles
+  for (let y = 120; y < fl; y += 60) g += `<path d="M0 ${y} H${W}" stroke="#3a2f78" stroke-width="2" opacity=".55"/>`;
+  for (let x = 30; x < W; x += 80) g += `<path d="M${x} 120 V${fl}" stroke="#3a2f78" stroke-width="2" opacity=".4"/>`;
+  // coloured light pools
+  g += `<ellipse cx="170" cy="380" rx="330" ry="360" fill="url(#${u}lb)"/><ellipse cx="740" cy="340" rx="330" ry="360" fill="url(#${u}lp)"/>`;
+  // bay frame: neon arch (pink) with cyan inner line
+  g += `<path d="M40 ${fl} V200 Q40 110 130 110 H770 Q860 110 860 200 V${fl}" fill="none" ${stk(26)}/>`;
+  g += `<path d="M40 ${fl} V200 Q40 110 130 110 H770 Q860 110 860 200 V${fl}" fill="none" stroke="#2c2560" stroke-width="18"/>`;
+  g += neon(`M40 ${fl} V200 Q40 110 130 110 H770 Q860 110 860 200 V${fl}`, PINK, 6, `${u}n`);
+  g += neon(`M74 ${fl} V214 Q74 146 140 146 H760 Q826 146 826 214 V${fl}`, CYAN, 3, `${u}n`);
+  // overhead spray bar + nozzles + falling water
+  g += `<rect x="96" y="214" width="708" height="22" rx="11" fill="url(#${u}pipe)" ${stk(5)}/>`;
+  for (let x = 150; x <= 750; x += 100) {
+    g += `<path d="M${x - 12} 236 H${x + 12} L${x + 7} 254 H${x - 7} Z" fill="#8d93b8" ${stk(4)}/>`;
+    g += `<path d="M${x - 6} 258 L${x - 54} 520 H${x + 54} L${x + 6} 258 Z" fill="url(#${u}spray)"/>`;
+    for (let k = -2; k <= 2; k++) g += `<path d="M${x + k * 3} 262 L${x + k * 18} ${400 + R() * 90}" stroke="#bff6ff" stroke-width="3" stroke-linecap="round" opacity="${f2(0.25 + R() * 0.25)}"/>`;
+  }
+  // side roller brushes (soft, behind everything)
+  [[84, CYAN], [816, PINK]].forEach(([x, c]) => {
+    g += `<rect x="${x - 6}" y="250" width="12" height="${fl - 250}" fill="#5d6288" ${stk(4)}/>`;
+    g += `<rect x="${x - 46}" y="300" width="92" height="${fl - 330}" rx="40" fill="url(#${u}br${x < 400 ? "c" : "p"})" ${stk(5)}/>`;
+    for (let y = 330; y < fl - 50; y += 34) g += `<path d="M${x - 40} ${y} Q${x} ${y + 14} ${x + 40} ${y}" fill="none" stroke="${mix(c, "#ffffff", 0.45)}" stroke-width="5" stroke-linecap="round" opacity=".55"/>`;
+    g += `<rect x="${x - 30}" y="310" width="12" height="${fl - 360}" rx="6" fill="#fff" opacity=".22"/>`;
+  });
+  // floor: wet, dark, with neon reflections and a drain
+  g += `<rect x="0" y="${fl}" width="${W}" height="${H - fl}" fill="url(#${u}floor)"/>`;
+  g += `<path d="M0 ${fl} H${W}" stroke="${CYAN}" stroke-width="5" opacity=".7" filter="url(#${u}n)"/><path d="M0 ${fl + 2} H${W}" stroke="#bff6ff" stroke-width="2"/>`;
+  for (let i = 1; i < 6; i++) { const y = fl + i * i * 17; g += `<path d="M0 ${y} H${W}" stroke="#2c2560" stroke-width="3" opacity=".6"/>`; }
+  for (let i = -5; i <= 5; i++) g += `<path d="M${450 + i * 70} ${fl} L${450 + i * 210} ${H}" stroke="#2c2560" stroke-width="3" opacity=".5"/>`;
+  [[150, CYAN], [330, PINK], [580, VIOLET], [760, PINK]].forEach(([x, c]) => { g += `<rect x="${x - 22}" y="${fl + 10}" width="44" height="${H - fl}" fill="${c}" opacity=".16" filter="url(#${u}bl)"/>`; });
+  // puddles
+  [[170, 1180, 120, 22], [720, 1210, 140, 24], [470, 1265, 180, 20]].forEach(([x, y, rx, ry]) => { g += `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#5aa8ff" opacity=".18"/><path d="M${x - rx * 0.6} ${y - ry * 0.3} Q${x} ${y - ry * 0.7} ${x + rx * 0.5} ${y - ry * 0.4}" fill="none" stroke="#dff8ff" stroke-width="3" stroke-linecap="round" opacity=".45"/>`; });
+  return g;
+}
+function bubble(x, y, r, op) {   // a soap bubble: tinted rim + glints
+  return `<circle cx="${f2(x)}" cy="${f2(y)}" r="${f2(r)}" fill="#bff6ff" fill-opacity=".12" stroke="#e8fbff" stroke-width="${f2(Math.max(1.6, r * 0.09))}" opacity="${op || 0.8}"/>` +
+    `<path d="M${f2(x - r * 0.55)} ${f2(y - r * 0.15)} Q${f2(x - r * 0.5)} ${f2(y - r * 0.55)} ${f2(x - r * 0.12)} ${f2(y - r * 0.62)}" fill="none" stroke="#fff" stroke-width="${f2(Math.max(1.4, r * 0.12))}" stroke-linecap="round" opacity="${op || 0.8}"/>` +
+    `<circle cx="${f2(x + r * 0.4)}" cy="${f2(y + r * 0.38)}" r="${f2(r * 0.1)}" fill="#ffd6f0" opacity="${op || 0.8}"/>`;
+}
+const DROP = (x, y, s) => `M${f2(x)} ${f2(y - 14 * s)} Q${f2(x + 9 * s)} ${f2(y - 1 * s)} ${f2(x + 8 * s)} ${f2(y + 3 * s)} Q${f2(x + 7 * s)} ${f2(y + 10 * s)} ${f2(x)} ${f2(y + 10 * s)} Q${f2(x - 7 * s)} ${f2(y + 10 * s)} ${f2(x - 8 * s)} ${f2(y + 3 * s)} Q${f2(x - 9 * s)} ${f2(y - 1 * s)} ${f2(x)} ${f2(y - 14 * s)} Z`;
+function carHood(B, S, u) {   // the hood close-up car (front, 3/4 from above), 900×1300 space
+  const cx = WASH.cx, { top, topHw, lip, lipHw } = HOOD;
+  const bodyD = smooth(symPts(cx, [[0, 236], [120, 238], [168, 256], [236, 392], [292, 424], [338, 500], [356, 700], [360, 900], [356, 1060], [334, 1118], [250, 1132], [0, 1136]]));
+  const hoodD = `M${cx - topHw} ${top} Q${cx} ${top - 10} ${cx + topHw} ${top} Q${cx + lipHw - 20} ${(top + lip) / 2} ${cx + lipHw} ${lip} Q${cx} ${lip + 34} ${cx - lipHw} ${lip} Q${cx - lipHw + 20} ${(top + lip) / 2} ${cx - topHw} ${top} Z`;
+  const defs = lin(`${u}b`, [[0, shade(B, 0.42)], [0.35, shade(B, 0.12)], [0.75, B], [1, shade(B, -0.32)]]) +
+    lin(`${u}f`, [[0, shade(B, -0.3)], [0.5, shade(B, 0.05)], [1, shade(B, -0.3)]], 0, 0, 1, 0) +
+    lin(`${u}h`, [[0, shade(B, 0.5)], [0.45, shade(B, 0.15)], [1, shade(B, -0.08)]]) +
+    rad(`${u}hb`, [[0, "#ffffff", 0.35], [1, "#ffffff", 0]], 0.5, 0.3, 0.6) +
+    lin(`${u}g`, [[0, "#5a6cc0"], [0.55, "#1d2350"], [1, "#141838"]]) +
+    rad(`${u}l`, [[0, "#ffffff"], [0.5, "#fff6c8"], [1, "#ffd98a"]], 0.45, 0.4, 0.7) + glow(`${u}gl`, 6) + blur(`${u}sh`, 12);
+  let g = "";
+  // tyres peeking under the bumper
+  [-1, 1].forEach((s) => { g += `<rect x="${cx + s * 300 - 58}" y="1070" width="116" height="98" rx="26" fill="#1e1b30" ${stk(9)}/><path d="M${cx + s * 300 - 40} 1140 H${cx + s * 300 + 40}" stroke="#4a4766" stroke-width="7" stroke-linecap="round"/>`; });
+  // body
+  g += `<path d="${bodyD}" fill="url(#${u}b)" ${stk(10)}/>`;
+  // fender sides (darker flanks) + front fascia band
+  [-1, 1].forEach((s) => { g += `<path d="M${cx + s * 300} 440 Q${cx + s * 352} 600 ${cx + s * 356} 900 L${cx + s * lipHw} ${lip} Q${cx + s * (lipHw - 20)} ${(top + lip) / 2} ${cx + s * topHw} ${top} Z" fill="${shade(B, -0.14)}" opacity=".55"/>`; });
+  g += `<path d="M${cx - 356} 908 Q${cx} 948 ${cx + 356} 908 L${cx + 356} 1060 Q${cx + 334} 1118 ${cx + 250} 1132 L${cx - 250} 1132 Q${cx - 334} 1118 ${cx - 356} 1060 Z" fill="url(#${u}f)" opacity=".55"/>`;
+  // windshield (with roof strip above) + reflections + wiper
+  const wsD = `M${cx - 150} 268 Q${cx} 258 ${cx + 150} 268 L${cx + 226} 398 Q${cx} 414 ${cx - 226} 398 Z`;
+  g += `<path d="${wsD}" fill="url(#${u}g)" ${stk(8)}/>`;
+  g += `<path d="M${cx - 112} 280 L${cx - 52} 280 L${cx - 132} 392 L${cx - 188} 390 Z M${cx - 30} 282 L${cx - 6} 282 L${cx - 80} 398 L${cx - 104} 398 Z" fill="#9fdcff" opacity=".28"/>`;
+  [[-200, 60], [10, 230]].forEach(([a, b]) => { g += `<path d="M${cx + a} 404 L${cx + b} 378" stroke="${INK}" stroke-width="11" stroke-linecap="round"/><path d="M${cx + a} 404 L${cx + b} 378" stroke="#3a3f6a" stroke-width="5" stroke-linecap="round"/><circle cx="${cx + a}" cy="404" r="9" fill="#2a2d55" ${stk(4)}/>`; });
+  // hood panel: shut line, bulge light, creases
+  g += `<path d="${hoodD}" fill="url(#${u}h)"/>`;
+  g += `<clipPath id="${u}hc"><path d="${hoodD}"/></clipPath><ellipse cx="${cx}" cy="560" rx="230" ry="200" fill="url(#${u}hb)" clip-path="url(#${u}hc)"/>`;
+  g += `<path d="M${cx - 120} 432 Q${cx - 140} 660 ${cx - 150} 890 M${cx + 120} 432 Q${cx + 140} 660 ${cx + 150} 890" fill="none" stroke="${shade(B, -0.22)}" stroke-width="5" stroke-linecap="round" opacity=".7"/>`;
+  // twin neon stripes (perspective: narrow at the windshield, wider at the lip)
+  const stripe = (a0, a1, b0, b1) => `M${cx + a0} ${top + 6} L${cx + a1} ${top + 6} L${cx + b1} ${lip + 18} L${cx + b0} ${lip + 18} Z`;
+  const SD = stripe(-50, -18, -70, -24) + " " + stripe(18, 50, 24, 70);
+  g += `<path d="${SD}" fill="${S}" opacity=".45" filter="url(#${u}gl)"/><path d="${SD}" fill="${S}" ${stk(4)}/>`;
+  g += `<path d="M${cx - 40} ${top + 16} L${cx - 54} ${lip} M${cx + 28} ${top + 16} L${cx + 34} ${lip}" stroke="${mix(S, "#ffffff", 0.6)}" stroke-width="4" stroke-linecap="round" opacity=".8"/>`;
+  g += `<path d="${hoodD}" fill="none" stroke="${shade(B, -0.45)}" stroke-width="5"/>`;
+  // headlights, grille, bumper intake, fog lights
+  [-1, 1].forEach((s) => {
+    const hx = cx + s * 222, hy = 968;
+    g += `<ellipse cx="${hx}" cy="${hy}" rx="96" ry="50" fill="#fff6c8" opacity=".55" filter="url(#${u}gl)"/>`;
+    g += `<path d="M${hx - s * 92} ${hy - 30} Q${hx} ${hy - 52} ${hx + s * 88} ${hy - 28} Q${hx + s * 100} ${hy + 10} ${hx + s * 60} ${hy + 40} Q${hx - s * 30} ${hy + 50} ${hx - s * 84} ${hy + 22} Q${hx - s * 104} ${hy - 6} ${hx - s * 92} ${hy - 30} Z" fill="url(#${u}l)" ${stk(8)}/>`;
+    g += `<circle cx="${hx - s * 18}" cy="${hy - 2}" r="26" fill="#ffffff" ${stk(5)}/><circle cx="${hx - s * 26}" cy="${hy - 10}" r="9" fill="#fff" opacity=".9"/>`;
+    g += `<path d="M${hx + s * 22} ${hy - 30} Q${hx + s * 60} ${hy - 30} ${hx + s * 76} ${hy - 12}" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".85"/>`;
+    g += `<circle cx="${cx + s * 236}" cy="1076" r="16" fill="#ffd98a" ${stk(5)}/>`;
+  });
+  g += `<rect x="${cx - 104}" y="950" width="208" height="68" rx="30" fill="#17123a" ${stk(8)}/>`;
+  [970, 986, 1002].forEach((y) => { g += `<path d="M${cx - 80} ${y} H${cx + 80}" stroke="${S}" stroke-width="6" stroke-linecap="round" opacity=".9"/>`; });
+  g += `<path d="M${cx - 150} 1056 Q${cx} 1066 ${cx + 150} 1056 L${cx + 136} 1096 Q${cx} 1106 ${cx - 136} 1096 Z" fill="#241f4a" ${stk(7)}/>`;
+  g += `<path d="M${cx - 330} 1040 Q${cx} 1070 ${cx + 330} 1040" fill="none" stroke="${shade(B, -0.45)}" stroke-width="5" opacity=".8"/>`;
+  return { defs, body: g, bodyD };
+}
+function washCloseup(v, done) {
+  const { W, H, cx, ground } = WASH, [B, S] = WASH_COLORS[v], u = "w";
+  const car = carHood(B, S, "wh");
+  const defs = car.defs + glow(`${u}n`, 4) + blur(`${u}bl`, 10) + blur(`${u}sb`, 8) + glow(`${u}sg`, 6) +
+    lin(`${u}wall`, [[0, "#0f0a2a"], [0.35, "#1d1450"], [0.65, "#271a5e"], [1, "#1a1245"]]) +
+    rad(`${u}lb`, [[0, "#3ab8ff", 0.45], [1, "#3ab8ff", 0]]) + rad(`${u}lp`, [[0, "#ff4fa0", 0.4], [1, "#ff4fa0", 0]]) +
+    lin(`${u}pipe`, [[0, "#c9cde2"], [0.5, "#8d93b8"], [1, "#4a4f78"]]) +
+    lin(`${u}spray`, [[0, "#bff6ff", 0.5], [1, "#bff6ff", 0]]) +
+    lin(`${u}brc`, [[0, "#1f8fb0"], [0.45, "#35e6ff"], [1, "#1a5f90"]], 0, 0, 1, 0) + lin(`${u}brp`, [[0, "#a3285f"], [0.45, "#ff7ab8"], [1, "#8a2a6a"]], 0, 0, 1, 0) +
+    lin(`${u}floor`, [[0, "#2a2160"], [0.3, "#1b1546"], [1, "#0e0b26"]]) +
+    lin(`${u}fade`, [[0, "#1b1546", 0.4], [1, "#120e30", 1]]) + lin(`${u}dust`, [[0, "#8a6a4a", 0], [0.5, "#8a6a4a", 0.14], [1, "#8a6a4a", 0.2]]) +
+    rad(`${u}halo`, [[0, mix(B, "#ffffff", 0.5), 0.6], [0.6, B, 0.18], [1, B, 0]]) +
+    `<clipPath id="${u}clip"><path d="${car.bodyD}"/></clipPath>`;
+  const R = rng(41);
+  let g = washBay(u, R);
+  [[170, 300, 26], [222, 350, 14], [700, 300, 30], [760, 360, 16], [130, 560, 22], [780, 600, 20], [140, 780, 16], [770, 800, 24], [300, 190, 12], [610, 186, 14]].forEach(([x, y, r]) => { g += bubble(x, y, r, 0.75); });
+  [[250, 470, 1], [660, 470, 1.1], [120, 680, 0.8], [790, 700, 0.9]].forEach(([x, y, k]) => { g += `<path d="${DROP(x, y, k * 1.5)}" fill="#7fdcff" opacity=".7" ${stk(2.4, "#bff6ff")}/>`; });
+  // reflection of the front on the wet floor, then the floor fade over it
+  g += `<g transform="translate(0 ${2 * ground}) scale(1 -1)" opacity=".38">${car.body}</g>`;
+  g += `<rect x="0" y="${ground}" width="${W}" height="${H - ground}" fill="url(#${u}fade)"/>`;
+  if (done) g += `<ellipse cx="${cx}" cy="660" rx="560" ry="520" fill="url(#${u}halo)"/>`;
+  g += `<ellipse cx="${cx}" cy="${ground}" rx="400" ry="22" fill="#05030f" opacity=".6" filter="url(#${u}sb)"/>`;
+  g += car.body;
+  g += `<g clip-path="url(#${u}clip)">`;
+  if (!done) {
+    g += `<rect x="0" y="0" width="${W}" height="${H}" fill="#7d7a8c" opacity=".24"/>`;
+    for (let i = 0; i < 70; i++) { const x = cx - 340 + R() * 680, y = 440 + R() * 660; g += `<circle cx="${f2(x)}" cy="${f2(y)}" r="${f2(1.5 + R() * 3)}" fill="#8a6a4a" opacity="${f2(0.2 + R() * 0.25)}"/>`; }
+    g += `<rect x="0" y="760" width="${W}" height="400" fill="url(#${u}dust)"/>`;
+  } else {
+    g += `<path d="M${cx - 200} 448 Q${cx} 430 ${cx + 200} 448" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" opacity=".85"/>`;
+    [[-260, 40], [-120, 70], [60, 30], [180, 56]].forEach(([x, w]) => { g += `<path d="M${cx + x} 1150 L${cx + x + w} 1150 L${cx + x + w + 200} 420 L${cx + x + 200} 420 Z" fill="#fff" opacity=".16"/>`; });
+    g += `<path d="M${cx - 300} 520 Q${cx - 330} 700 ${cx - 330} 880 M${cx + 300} 520 Q${cx + 330} 700 ${cx + 330} 880" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity=".55"/>`;
+  }
+  g += `</g>`;
+  if (done) {
+    const sp = [[0.24, 0.42, 34], [0.74, 0.38, 30], [0.62, 0.56, 22], [0.33, 0.62, 20], [0.5, 0.15, 26], [0.2, 0.25, 22], [0.82, 0.6, 26], [0.5, 0.7, 16], [0.7, 0.78, 18], [0.27, 0.8, 16]];
+    sp.forEach(([a, b, r], i) => { g += `<path d="${star(W * a, H * b, r, r * 0.28, 4)}" fill="${i % 3 === 1 ? "#bff6ff" : "#fff6c8"}" filter="url(#${u}sg)"/><path d="${star(W * a, H * b, r * 0.45, r * 0.14, 4)}" fill="#fff"/>`; });
+  }
+  return job(`assets/img/wash_${v}${done ? "_done" : ""}.png`, W, H, g, defs);
+}
+// Mud splats that sit on the car body (spots to scrub). face: cute little sad face
+function mudSplat(file, seed, o) {
+  const R = rng(seed), cx = 64, cy = 66, col = o.col || "#8a5a34", rim = shade(col, -0.45);
+  const defs = rad(`${file}m`, [[0, shade(col, 0.28)], [0.7, col], [1, shade(col, -0.18)]], 0.42, 0.36, 0.72);
+  const pts = [], n = 22, lobe = Array.from({ length: 7 }, () => 0.5 + R() * 0.9);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2, t = (i / n) * 7, k = Math.floor(t), fr = t - k;
+    const rr = (o.r || 36) + Math.sin(fr * Math.PI) * lobe[k % 7] * 9;
+    pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.88]);
+  }
+  let g = `<path d="${smooth(pts)}" fill="url(#${file}m)" stroke="${rim}" stroke-width="4" stroke-linejoin="round"/>`;
+  // flung droplets
+  for (let i = 0; i < (o.drops || 4); i++) {
+    const a = (i / (o.drops || 4)) * Math.PI * 2 + 0.4 + R() * 0.5, d = (o.r || 36) + 15 + R() * 6, r = 3.5 + R() * 3;
+    g += `<circle cx="${f2(cx + Math.cos(a) * d)}" cy="${f2(cy + Math.sin(a) * d * 0.88)}" r="${f2(r)}" fill="${col}" stroke="${rim}" stroke-width="2.4"/>`;
+  }
+  // dirt specks + gloss
+  for (let i = 0; i < (o.specks || 0); i++) { const a = R() * 6.28, d = o.face ? 25 + R() * 5 : R() * 24; g += `<circle cx="${f2(cx + Math.cos(a) * d)}" cy="${f2(cy + 6 + Math.sin(a) * d * 0.7)}" r="${f2(1.6 + R() * 2.2)}" fill="${i % 3 ? rim : "#c49a6a"}" opacity=".75"/>`; }
+  g += `<ellipse cx="${cx - 14}" cy="${cy - 16}" rx="10" ry="5" fill="#fff" opacity=".35" transform="rotate(-28 ${cx - 14} ${cy - 16})"/>`;
+  if (o.face) {
+    g += `<ellipse cx="${cx - 11}" cy="${cy - 2}" rx="5" ry="6" fill="${INK}"/><ellipse cx="${cx + 11}" cy="${cy - 2}" rx="5" ry="6" fill="${INK}"/><circle cx="${cx - 12.5}" cy="${cy - 4.5}" r="2" fill="#fff"/><circle cx="${cx + 9.5}" cy="${cy - 4.5}" r="2" fill="#fff"/>`;
+    g += `<path d="M${cx - 7} ${cy + 13} Q${cx} ${cy + 7} ${cx + 7} ${cy + 13}" fill="none" stroke="${INK}" stroke-width="3.4" stroke-linecap="round"/>`;
+    g += `<path d="M${cx - 17} ${cy - 9} L${cx - 8} ${cy - 13} M${cx + 17} ${cy - 9} L${cx + 8} ${cy - 13}" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`;
+  }
+  return job(`assets/img/${file}.png`, 128, 128, g, defs);
+}
+// Car-wash sponge held by a strap handle, foam on top; scrubbing face = bottom edge, tilted
+// so its bottom-left corner leads (SPONGE.tip, local coords before rotation).
+const SPONGE = { W: 128, cx: 66, cy: 70, rot: -22, tip: [-30, 22] };
+function spongeTip() { const a = SPONGE.rot * Math.PI / 180, [x, y] = SPONGE.tip; return { x: +((SPONGE.cx + x * Math.cos(a) - y * Math.sin(a)) / SPONGE.W).toFixed(3), y: +((SPONGE.cy + x * Math.sin(a) + y * Math.cos(a)) / SPONGE.W).toFixed(3) }; }
+function spongeBody(sw, foam) {   // local coords, centred on 0,0: 84×46 block
+  let g = `<path d="M-42 -8 Q-44 -24 -26 -24 H26 Q44 -24 42 -8 L42 10 Q44 24 28 24 H-28 Q-44 24 -42 10 Z" fill="url(#spy)" ${stk(sw)}/>`;
+  g += `<path d="M-40 12 Q-42 22 -28 22 H28 Q42 22 40 12" fill="none" stroke="#d99a1a" stroke-width="${sw * 1.4}" stroke-linecap="round" opacity=".55"/>`;
+  [[-26, -6, 4], [-12, 4, 3], [4, -10, 3.5], [18, 2, 4.2], [30, -8, 2.6], [-30, 8, 2.6], [8, 12, 2.6], [-4, -2, 2]].forEach(([x, y, r]) => { g += `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 0.8}" fill="#d9921a" opacity=".7"/>`; });
+  g += `<path d="M-34 -14 Q-20 -19 -4 -18" fill="none" stroke="#fff" stroke-width="${sw * 0.9}" stroke-linecap="round" opacity=".6"/>`;
+  if (foam) {
+    [[-30, -24, 9], [-16, -28, 11], [0, -27, 9], [15, -29, 12], [31, -24, 9], [-6, -36, 7], [22, -38, 6]].forEach(([x, y, r]) => { g += `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#spf)" ${stk(sw * 0.75)}/>`; });
+    g += `<path d="M-38 -24 H40" stroke="url(#spf)" stroke-width="10" stroke-linecap="round"/>`;
+  }
+  return g;
+}
+const SPONGE_DEFS = lin("spy", [[0, "#fff09a"], [0.5, "#ffd23c"], [1, "#f0a81e"]]) + rad("spf", [[0, "#ffffff"], [0.7, "#f2fbff"], [1, "#cfe9ff"]], 0.38, 0.32, 0.7);
+function sponge() {
+  const defs = SPONGE_DEFS + lin("sph", [[0, "#7ae8ff"], [1, "#2a9ad8"]]) + glow("spg", 2.5);
+  let g = `<g transform="translate(${SPONGE.cx} ${SPONGE.cy}) rotate(${SPONGE.rot})">`;
+  // strap handle over the top (behind the foam)
+  g += `<path d="M-22 -22 Q-24 -58 0 -58 Q24 -58 22 -22" fill="none" stroke="${INK}" stroke-width="15" stroke-linecap="round"/><path d="M-22 -22 Q-24 -58 0 -58 Q24 -58 22 -22" fill="none" stroke="url(#sph)" stroke-width="8" stroke-linecap="round"/><path d="M-14 -46 Q-8 -53 2 -53" fill="none" stroke="#e8fbff" stroke-width="2.6" stroke-linecap="round" opacity=".8"/>`;
+  g += spongeBody(4, true);
+  g += `</g>`;
+  g += bubble(108, 30, 9, 0.95) + bubble(116, 54, 5.5, 0.95) + bubble(20, 34, 6, 0.95);
+  g += `<path d="${star(104, 92, 9, 2.8, 4)}" fill="#fff6c8" filter="url(#spg)"/>`;
+  return job("assets/img/sponge.png", SPONGE.W, SPONGE.W, g, defs);
+}
+
 /* ============================ BUILD ============================ */
 const HIDPI = [
   [/favicon|apple-touch|icon-192|icon-maskable/, { keep: true }],
   [/splash/, { scale: 2, type: "webp", ext: ".webp" }],
+  [/assets\/img\/wash_/, { scale: 2, type: "webp", ext: ".webp" }],   // car-wash close-up backdrops (like closeups)
   [/logo/, { scale: 2.5, type: "webp", ext: ".webp" }],
+  [/assets\/img\/(mud_|sponge)/, { scale: 3, type: "webp", ext: ".webp" }],   // close-up props (like nebula's dust/cloth)
   [/ui\/icons\//, { scale: 2, type: "webp", ext: ".webp" }],
   [/assets\/ui\//, { scale: 6, type: "webp", ext: ".webp" }],
   [/assets\/(img|sheet)\//, { scale: 2, type: "webp", ext: ".webp" }],
@@ -1113,6 +1346,8 @@ function build() {
     towerJob("assets/img/bldg_b.png", 200, 260, { u: "bb", x0: 14, w: 172, d: 0, dy: 0, top: 84, base: 246, wall: "#4a2f6e", accent: PINK, win: "strips", cols: 5, rows: 6, glyph: "star", glyph2: "wave", accent2: CYAN, signY: 40, seed: 15 }),
     wantGas(), parcelMarker(), deliveryTarget(), flag(),
     logo(), splash(),
+    ...Object.keys(WASH_COLORS).flatMap((v) => [washCloseup(v, false), washCloseup(v, true)]),
+    mudSplat("mud_a", 7, { face: true, drops: 4 }), mudSplat("mud_b", 19, { col: "#7a4e2c", r: 33, drops: 6, specks: 9 }), mudSplat("mud_c", 31, { col: "#94643a", face: true, r: 34, drops: 3, specks: 7 }), sponge(),
     icon("assets/favicon.png", 512), icon("assets/apple-touch-icon.png", 180), icon("assets/icon-192.png", 192), icon("assets/icon-maskable.png", 512, 0.78),
     ...IK.jobs(PAL, ["star", "heart", "heartEmpty", "sound", "soundOff", "help", "avatar", "goals", "close", "play", "resume", "check", "gift", "hand", "sparkle", "bell", "refresh", "arrow", "trophy", "moon", "calendar", "palette", "home", "lock"]),
     ...gameIcons());
@@ -1120,3 +1355,7 @@ function build() {
 }
 module.exports = () => K.hidpi(build(), HIDPI);
 module.exports.PEOPLE = PEOPLE;
+if (require.main === module) {
+  console.log("closeup.spots.area =", JSON.stringify(washAreas()));
+  console.log("closeup.brushTip   =", JSON.stringify(spongeTip()));
+}
