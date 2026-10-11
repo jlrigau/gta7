@@ -1852,7 +1852,7 @@ function mudSplat(file, seed, o) {
   }
   return job(`assets/img/${file}.png`, 128, 128, g, defs);
 }
-// Car-wash sponge held by a strap handle, foam on top; scrubbing face = bottom edge, tilted
+// Car-wash sponge (no handle: owner found the blue strap arc confusing), foam on top; scrubbing face = bottom edge, tilted
 // so its bottom-left corner leads (SPONGE.tip, local coords before rotation).
 const SPONGE = { W: 128, cx: 66, cy: 70, rot: -22, tip: [-30, 22] };
 function spongeTip() { const a = SPONGE.rot * Math.PI / 180, [x, y] = SPONGE.tip; return { x: +((SPONGE.cx + x * Math.cos(a) - y * Math.sin(a)) / SPONGE.W).toFixed(3), y: +((SPONGE.cy + x * Math.sin(a) + y * Math.cos(a)) / SPONGE.W).toFixed(3) }; }
@@ -1869,10 +1869,8 @@ function spongeBody(sw, foam) {   // local coords, centred on 0,0: 84×46 block
 }
 const SPONGE_DEFS = lin("spy", [[0, "#fff09a"], [0.5, "#ffd23c"], [1, "#f0a81e"]]) + rad("spf", [[0, "#ffffff"], [0.7, "#f2fbff"], [1, "#cfe9ff"]], 0.38, 0.32, 0.7);
 function sponge() {
-  const defs = SPONGE_DEFS + lin("sph", [[0, "#7ae8ff"], [1, "#2a9ad8"]]) + glow("spg", 2.5);
+  const defs = SPONGE_DEFS + glow("spg", 2.5);
   let g = `<g transform="translate(${SPONGE.cx} ${SPONGE.cy}) rotate(${SPONGE.rot})">`;
-  // strap handle over the top (behind the foam)
-  g += `<path d="M-22 -22 Q-24 -58 0 -58 Q24 -58 22 -22" fill="none" stroke="${INK}" stroke-width="15" stroke-linecap="round"/><path d="M-22 -22 Q-24 -58 0 -58 Q24 -58 22 -22" fill="none" stroke="url(#sph)" stroke-width="8" stroke-linecap="round"/><path d="M-14 -46 Q-8 -53 2 -53" fill="none" stroke="#e8fbff" stroke-width="2.6" stroke-linecap="round" opacity=".8"/>`;
   g += spongeBody(4, true);
   g += `</g>`;
   g += bubble(108, 30, 9, 0.95) + bubble(116, 54, 5.5, 0.95) + bubble(20, 34, 6, 0.95);
