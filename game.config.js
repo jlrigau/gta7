@@ -19,6 +19,7 @@
 window.GAME = {
   /* ---- Identity, theming, UI strings (French) ---- */
   meta: {
+    lang: "fr",                        // source language of every text below (translations: game.i18n.js)
     title: "GTA 7 · Neon City",
     titleIcon: "car",
     logo: "assets/img/logo.webp",
@@ -27,7 +28,7 @@ window.GAME = {
     tagline: "Roule, livre, fais la course… et sème la police !",
     saveKey: "gta7-neon-city",
     audience: { minAge: 10, notes: "arcade/cartoon action, top-down driving, mild — no weapons, no gore, no blood, no explicit content" },
-    assetVersion: "v19",
+    assetVersion: "v20",
     theme: { home: "#160f28", play: "#141024", closeup: "#141024" },
 
     showCoins: true,
@@ -207,8 +208,9 @@ window.GAME = {
       // CLOSE-UP car wash: zoom on the hood and scrub the mud off with the sponge
       { id: "wash", type: "closeup", label: "Laver", icon: "wash", color: "#3fd0ff", stat: "wash",
         closeup: {
-          bg: "wash_silver", spotSprites: ["mud_a", "mud_b", "mud_c"], brush: "sponge", brushTip: { x: 0.363, y: 0.794 }, brushRest: { x: 0.66, y: 0.9 },
-          spots: { base: 4, growEvery: 2, max: 9, rubs: 3, size: 150, minGap: 0.12,
+          bg: "wash_silver", spotSprites: ["mud_a", "mud_b", "mud_c"], brush: "sponge", brushTip: { x: 0.363, y: 0.794 }, brushRest: { x: 0.72, y: 0.93 },
+          spots: { base: 3, growEvery: 3, max: 4, rubs: 3, size: 150, minGap: 0.10,   // portrait hood holds 3 spots + 1 on the door without overlapping (simulated: 4 spots → ~20 %, 3 → 0 %)
+
                    // the hood top, then the door panel, as perspective QUADS (washAreas() quads in tools/art/neon.cjs)
                    area: [{ quad: [[0.567, 0.654], [0.347, 0.713], [0.249, 0.645], [0.463, 0.589]], margin: 0.05 },
                          { quad: [[0.76, 0.757], [0.714, 0.767], [0.714, 0.713], [0.761, 0.704]], margin: 0.05, max: 1 }] },   // front of the door: room for one spot

@@ -1294,7 +1294,7 @@ function carP(B, S, u, done) {
   const C = CARP, L = C.hl, Wh = C.hw;
   const defs = lin(`${u}sd`, [[0, shade(B, 0.22)], [0.55, B], [1, shade(B, -0.3)]]) + lin(`${u}sh`, [[0, shade(B, 0.5)], [1, shade(B, 0.08)]]) +
     lin(`${u}tp`, [[0, shade(B, 0.62)], [1, shade(B, 0.25)]], 0, 0, 1, 1) + lin(`${u}rf`, [[0, shade(B, 0.62)], [1, shade(B, 0.4)]], 0, 0, 1, 1) +
-    lin(`${u}ns`, [[0, shade(B, 0.0)], [1, shade(B, -0.34)]]) + lin(`${u}fl`, done ? [[0, shade(B, 0.3)], [1, shade(B, -0.05)]] : [[0, mix(shade(B, 0.1), "#8a6a48", 0.3)], [1, mix(shade(B, -0.15), "#8a6a48", 0.3)]]) +
+    lin(`${u}ns`, [[0, shade(B, 0.0)], [1, shade(B, -0.34)]]) + lin(`${u}fl`, done ? [[0, shade(B, 0.3)], [1, shade(B, -0.05)]] : [[0, mix(shade(B, -0.08), "#7a5e40", 0.18)], [0.6, mix(shade(B, -0.12), "#6b4a2e", 0.35)], [1, mix(shade(B, -0.2), "#5a3f26", 0.5)]]) +
     lin(`${u}gl`, [[0, "#7a8ce0"], [0.5, "#2a3270"], [1, "#161a40"]], 0, 0, 0.4, 1) + rad(`${u}w`, [[0, "#ffffff"], [0.55, "#c9cfe4"], [1, "#6d7393"]], 0.4, 0.35, 0.7) +
     glow(`${u}g`, 3) + blur(`${u}bl`, 9) + blur(`${u}b2`, 1.2);
   const st = (w) => `stroke="${INK}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
@@ -1560,13 +1560,13 @@ function washGirl(pose, u, low) {
   // summer cap: a FLAT low crown (starts lower, ry r·0.62 — still covers the skull top) with a centre seam +
   // a long visor sticking out toward the raised arm (reads as a baseball cap, not a hard hat)
   const cy0 = hy - r * 0.42, C2 = shade(k.cap, -0.18);
-  g += `<path d="M${cx - r * 1.04} ${cy0} A${r * 1.04} ${r * 0.62} 0 0 1 ${cx + r * 1.04} ${cy0} Q${cx} ${cy0 + r * 0.12} ${cx - r * 1.04} ${cy0} Z" fill="${k.cap}" ${st}/>`;
-  g += `<path d="M${cx} ${cy0 - r * 0.6} Q${cx + r * 0.08} ${cy0 - r * 0.3} ${cx + r * 0.04} ${cy0 + r * 0.05}" fill="none" stroke="${C2}" stroke-width="2"/>`;
+  g += `<path d="M${cx - r * 1.04} ${cy0} A${r * 1.04} ${r * 0.62} 0 0 1 ${cx + r * 1.04} ${cy0} Q${cx} ${cy0 + r * 0.12} ${cx - r * 1.04} ${cy0} Z" fill="${PINK}" ${st}/>`;   // soft pink crown (a yellow dome read as a hard hat)
+  g += `<path d="M${cx} ${cy0 - r * 0.6} Q${cx + r * 0.08} ${cy0 - r * 0.3} ${cx + r * 0.04} ${cy0 + r * 0.05}" fill="none" stroke="${shade(PINK, -0.25)}" stroke-width="2"/>`;
   g += `<path d="M${cx - r * 0.6} ${cy0 - r * 0.38} Q${cx - r * 0.3} ${cy0 - r * 0.56} ${cx - r * 0.08} ${cy0 - r * 0.56}" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/>`;
-  g += `<path d="${star(cx - r * 0.42, cy0 - r * 0.24, r * 0.16, r * 0.07)}" fill="${PINK}" ${stk(1.4)}/>`;
-  g += `<circle cx="${cx}" cy="${f2(cy0 - r * 0.62)}" r="2" fill="${C2}" ${stk(1.2)}/>`;
+  g += `<path d="${star(cx - r * 0.42, cy0 - r * 0.24, r * 0.16, r * 0.07)}" fill="${YELLOW}" ${stk(1.4)}/>`;
+  g += `<circle cx="${cx}" cy="${f2(cy0 - r * 0.62)}" r="2" fill="#e0a800" ${stk(1.2)}/>`;
   g += `<path d="M${cx - r * 0.8} ${cy0 + r * 0.12} Q${cx} ${cy0 + r * 0.5} ${cx + r * 0.85} ${cy0 + r * 0.12} Q${cx} ${cy0 + r * 0.3} ${cx - r * 0.8} ${cy0 + r * 0.12} Z" fill="${shade(k.skin, -0.25)}" opacity=".35"/>`;   // forehead under-shadow
-  g += `<path d="M${cx - r * 0.75} ${cy0 + r * 0.02} Q${cx + r * 0.2} ${cy0 + r * 0.62} ${cx + r * 1.5} ${cy0 + r * 0.12} Q${cx + r * 1.62} ${cy0 - r * 0.06} ${cx + r * 1.2} ${cy0 - r * 0.04} Q${cx + r * 0.2} ${cy0 + r * 0.22} ${cx - r * 0.75} ${cy0 + r * 0.02} Z" fill="${C2}" ${st}/>`;   // visor, out toward the raised arm
+  g += `<path d="M${cx - r * 0.75} ${cy0 + r * 0.02} Q${cx + r * 0.3} ${cy0 + r * 0.7} ${cx + r * 1.75} ${cy0 + r * 0.16} Q${cx + r * 1.9} ${cy0 - r * 0.06} ${cx + r * 1.4} ${cy0 - r * 0.04} Q${cx + r * 0.25} ${cy0 + r * 0.24} ${cx - r * 0.75} ${cy0 + r * 0.02} Z" fill="#e0a800" ${st}/>`;   // longer, darker yellow brim   // visor, out toward the raised arm
   g += `<path d="M${cx + r * 0.2} ${cy0 + r * 0.32} Q${cx + r * 0.8} ${cy0 + r * 0.3} ${cx + r * 1.3} ${cy0 + r * 0.1}" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".45"/>`;
   return { defs, body: g, hand: pose === "cheer" ? null : hb, tip, head: [cx, hy - 2], headR: r + 3, armB };
 }
@@ -1732,15 +1732,21 @@ function washScene(v, done, wide) {
     if (!done && 34 * GL.s < 40) console.warn(`wash: hose leg below the hand only ${(34 * GL.s).toFixed(0)} px (${v}${wide ? " wide" : ""})`);
   }
   if (hd) {
-    const ang = Math.atan2(aim[1] - hd[1], aim[0] - hd[0]) * 180 / Math.PI - 90, ra = ang * Math.PI / 180;
-    const loc = (x, y) => [hd[0] + (x * Math.cos(ra) - y * Math.sin(ra)) * GL.s, hd[1] + (x * Math.sin(ra) + y * Math.cos(ra)) * GL.s];
-    const back = loc(0, -10);   // the gun's back end, where the hose attaches
+    // pistol gun: grip straight DOWN from the fist (the hose enters its bottom), barrel FORWARD toward the car,
+    // tilted 20° down — the jet leaves the nozzle ~25 px to the car side of the hose, never along it
+    const ra = 20 * Math.PI / 180, loc = (x, y) => [hd[0] + mir * (x * Math.cos(ra) - y * Math.sin(ra)) * GL.s, hd[1] + (x * Math.sin(ra) + y * Math.cos(ra)) * GL.s];
+    const back = [hd[0] - mir * 0.5 * GL.s, hd[1] + 14 * GL.s];   // grip bottom
+    GL.nozzle = loc(22, 0);
     // far hood edge height at a screen x (the stub's end goes below it, so the hood hides it)
     const fe = []; for (let x = C.hood[0]; x <= C.hl; x += 4) fe.push(im(projP(x, yTop(x), C.hw - C.inset)));
     const feY = (x) => { for (let i = 0; i < fe.length - 1; i++) { const a = fe[i], b = fe[i + 1]; if ((x - a[0]) * (x - b[0]) <= 0) return a[1] + (b[1] - a[1]) * (x - a[0]) / ((b[0] - a[0]) || 1); } return -1e9; };
     const endY = Math.max(back[1] + 34 * GL.s, feY(back[0] - mir * 6 * GL.s) + 14 * GL.s);
     g += hoseStroke(`M${f2(back[0])} ${f2(back[1])} Q${f2(back[0])} ${f2((back[1] + endY) / 2)} ${f2(back[0] - mir * 6 * GL.s)} ${f2(endY)}`);   // grip → down, AFTER her (ends behind the hood)
-    g += washGun(hd, ang, GL.s, true);
+    g += `<g transform="translate(${f2(hd[0])} ${f2(hd[1])}) scale(${f2(mir * GL.s)} ${f2(GL.s)})">`;
+    g += `<rect x="-3.5" y="-1" width="7" height="15" rx="2.5" fill="#3a3f78" ${stk(2.2)}/>`;   // grip
+    g += `<g transform="rotate(20)"><rect x="-4" y="-4.5" width="22" height="8" rx="3" fill="#3a3f78" ${stk(2.2)}/><rect x="16" y="-5.5" width="6.5" height="10" rx="2" fill="${YELLOW}" ${stk(2)}/><path d="M6 3.5 q1 6 6 5" fill="none" ${stk(1.8)}/></g>`;   // barrel + nozzle + trigger guard
+    g += `<circle cx="0" cy="2" r="6.2" fill="${WASHER.skin}" ${stk(3)}/><path d="M-3 -2.5 Q2 -6 6 -2" fill="none" stroke="${shade(WASHER.skin, -0.3)}" stroke-width="1.6" stroke-linecap="round"/>`;   // fist + thumb over the barrel
+    g += `</g>`;
   }
 
   // the car, its finish (clipped to the paint, under the flares/wheels), then the front layer
@@ -1788,8 +1794,8 @@ function washScene(v, done, wide) {
   if (done) g += washGun(gunFloor, 70, GL.s * 1.1, false);   // the gun lies on the floor at the hose end
   // water jet: hose tip → front-near hood (away from her body); drops + a splash ring on the hood plane
   if (!done) {
-    const dx = aim[0] - hd[0], dy = aim[1] - hd[1], dl = Math.hypot(dx, dy) || 1, dir = [dx / dl, dy / dl];
-    const t = [hd[0] + dir[0] * 17 * GL.s, hd[1] + dir[1] * 17 * GL.s], c = [t[0] + dir[0] * 40 * GL.s, t[1] + dir[1] * 40 * GL.s - 30 * GL.s];
+    const t = GL.nozzle, dir = [mir * Math.cos(20 * Math.PI / 180), Math.sin(20 * Math.PI / 180)];   // out of the nozzle, along the barrel
+    const c = [t[0] + dir[0] * 40 * GL.s, t[1] + dir[1] * 40 * GL.s - 20 * GL.s];
     const hc = gp(girl.head), hr = girl.headR * GL.s;
     let dmin = 1e9; for (let k = 0; k <= 40; k++) { const p = qb(t, c, aim, k / 40); dmin = Math.min(dmin, Math.hypot(p[0] - hc[0], p[1] - hc[1]) - hr); }
     if (dmin < 0) console.warn(`wash jet crosses the girl's head (${v}${wide ? " wide" : ""}): ${dmin.toFixed(0)} px`);
