@@ -277,7 +277,7 @@ window.GAME = {
         { name: "Panthère", sprite: "car_back", tint: "#c07cff", color: "#c07cff" },
         { name: "Fusée", sprite: "car_back", tint: "#ff8a3d", color: "#ff8a3d" },
       ],
-      scale: 6.5, hw: 0.34, skill: [0.82, 0.97], gridGap: 5, gridFirst: 4, lanes: [-0.62, 0.62],
+      scale: 6.5, hw: 0.34, skill: [0.82, 0.97], gridGap: 6, gridFirst: 4, lanes: [-0.62, 0.62],
       rewards: [110, 70, 45, 25, 15, 10],
       placeLabels: ["1er", "2e", "3e", "4e", "5e", "6e"],
       placeMessages: ["{i:trophy} Victoire ! Tu as battu tout le monde !", "{i:star} 2e ! Pas loin de la victoire !", "{i:star} 3e : tu montes sur le podium !", "Tu finis {place}. Double plus de voitures la prochaine fois !"],
